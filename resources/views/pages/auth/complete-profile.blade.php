@@ -8,7 +8,6 @@
 
 
         @if (session('error'))
-            <!-- Gunakan fixed, top-10, left-1/2, dan -translate-x-1/2 untuk menengahkan popup di atas -->
             <div id="error-toast"
                 class="fixed top-10 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl shadow-lg p-4 rounded-md bg-red-50 border border-red-200 flex items-start transition-opacity duration-500 ease-in-out opacity-100">
                 <svg class="w-5 h-5 text-red-500 mr-3 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24"
@@ -23,6 +22,24 @@
             </div>
         @endif
 
+        @if ($errors->any())
+            <div id="validation-toast"
+                class="fixed top-10 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl shadow-lg p-4 rounded-md bg-red-50 border border-red-200 flex items-start transition-opacity duration-500 ease-in-out opacity-100">
+                <svg class="w-5 h-5 text-orange-500 mr-3 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <h3 class="text-sm font-semibold text-orange-800">Validasi Form Gagal</h3>
+                    <ul class="text-xs text-orange-600 mt-1 list-disc pl-4">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
 
         <form action="{{ route('simpan.profile') }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -113,11 +130,9 @@
                             <span class="text-[11px] font-semibold text-gray-500">Maksimal 5 MB</span>
                         </div>
 
-                        <!-- Area Dropzone & Preview -->
                         <label
                             class="flex flex-col items-center justify-center w-full h-28 border-2 border-gray-200 border-dashed rounded cursor-pointer bg-white hover:bg-gray-50 transition relative overflow-hidden">
 
-                            <!-- State 1: Default (Sebelum Upload) -->
                             <div id="dropzone-default" class="flex flex-col items-center justify-center pt-4 pb-4">
                                 <div class="bg-gray-100 p-2 rounded mb-2">
                                     <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor"
@@ -132,7 +147,6 @@
                                 <p class="text-[10px] text-gray-500">JPG atau PNG</p>
                             </div>
 
-                            <!-- State 2: Preview (Setelah File Dipilih) -->
                             <div id="dropzone-preview"
                                 class="hidden flex items-center justify-between w-full h-full p-3 bg-gray-50 border border-green-200">
                                 <img id="ktp-preview-img"
@@ -230,15 +244,17 @@
             }
 
             setTimeout(function() {
-                const toast = document.getElementById('error-toast');
-                if (toast) {
-                    // Mengubah opacity menjadi 0 agar memudar
-                    toast.classList.replace('opacity-100', 'opacity-0');
+                const errorToast = document.getElementById('error-toast');
+                const validationToast = document.getElementById('validation-toast');
 
-                    // Menghapus elemen dari DOM sepenuhnya setelah animasi pudar selesai (500ms)
-                    setTimeout(() => {
-                        toast.remove();
-                    }, 500);
+                if (errorToast) {
+                    errorToast.classList.replace('opacity-100', 'opacity-0');
+                    setTimeout(() => errorToast.remove(), 500);
+                }
+
+                if (validationToast) {
+                    validationToast.classList.replace('opacity-100', 'opacity-0');
+                    setTimeout(() => validationToast.remove(), 500);
                 }
             }, 4000);
         </script>

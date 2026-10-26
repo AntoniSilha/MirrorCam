@@ -3,8 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleAuthController;
 
-use Illuminate\Http\Request; // Tambahkan ini untuk membaca URL
-use App\Models\DetailPemesananTenant; // Sesuaikan dengan nama model pemesanan Anda
+use Illuminate\Http\Request; 
+use App\Models\DetailPemesananTenant; 
 
 Route::view('/', 'welcome')->name('home');
 
