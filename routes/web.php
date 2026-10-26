@@ -6,7 +6,9 @@ use App\Http\Controllers\GoogleAuthController;
 use Illuminate\Http\Request; 
 use App\Models\DetailPemesananTenant; 
 
-Route::view('/', 'welcome')->name('home');
+use App\Portals\Customer\Controllers\HomeController;
+
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function (Request $request) {
