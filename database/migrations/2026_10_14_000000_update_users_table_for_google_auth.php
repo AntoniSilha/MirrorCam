@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! $this->hasLegacyUsersSchema()) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->string('google_id')->nullable()->index()->after('id');
             if (! Schema::hasColumn('users', 'avatar')) {
@@ -25,6 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! $this->hasLegacyUsersSchema()) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->dropIndex(['google_id']);
             $table->dropColumn('google_id');
@@ -33,5 +41,13 @@ return new class extends Migration
             }
             $table->string('password')->nullable(false)->change();
         });
+    }
+
+    private function hasLegacyUsersSchema(): bool
+    {
+        return Schema::hasTable('users')
+            && Schema::hasColumn('users', 'id')
+            && Schema::hasColumn('users', 'email')
+            && Schema::hasColumn('users', 'password');
     }
 };
