@@ -2,9 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleAuthController;
-
-use Illuminate\Http\Request; 
-use App\Models\DetailPemesananTenant; 
+use App\Http\Controllers\MitraRegisterController;
+use Illuminate\Http\Request;
+use App\Models\DetailPemesananTenant;
 
 Route::view('/', 'welcome')->name('home');
 
@@ -20,16 +20,16 @@ Route::middleware(['auth'])->group(function () {
         $query = DetailPemesananTenant::where('id_ktp', $user->id_akun);
 
         if ($activeFilter === 'sedang_disewa') {
-            $query->where('status_sewa', 'Sedang Disewa'); 
+            $query->where('status_sewa', 'Sedang Disewa');
         } elseif ($activeFilter === 'selesai') {
             $query->where('status_sewa', 'Selesai');
         }
 
         if ($activeSort === 'terlama') {
-            $query->orderBy('waktu_ambil_booking', 'asc'); 
+            $query->orderBy('waktu_ambil_booking', 'asc');
         } else {
 
-            $query->orderBy('waktu_ambil_booking', 'desc'); 
+            $query->orderBy('waktu_ambil_booking', 'desc');
         }
 
         $orders = $query->get();
@@ -58,3 +58,7 @@ Route::post('/complete-profile', [GoogleAuthController::class, 'storeDataProfile
 
 require __DIR__.'/settings.php';
 require __DIR__.'/customer.php';
+
+// Route Fitur Registrasi Mitra
+Route::get('/register-mitra', [MitraRegisterController::class, 'create'])->name('register.mitra');
+Route::post('/register-mitra', [MitraRegisterController::class, 'store'])->name('register.mitra.store');
