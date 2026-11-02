@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AccountGoogle;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,19 +16,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $googleUser = \App\Models\AccountGoogle::firstOrCreate(
-            ['id_user_google' => 'google_antoni_01'],
+        $account = AccountGoogle::query()->updateOrCreate(
+            ['id_user_google' => 'seed-owner-mirrorcam'],
             ['email' => 'antoni@mirrorcam.com']
         );
 
-        $user = User::firstOrCreate(
-            ['email' => 'antoni@mirrorcam.com'],
+        $user = User::query()->updateOrCreate(
+            ['id_user_google' => $account->id_user_google],
             [
-                'name' => 'Antoni Silha',
-                'password' => 'Password123!',
-                'email_verified_at' => now(),
-                'id_user_google' => 'google_antoni_01',
-                'role' => 'partner',
+                'role' => 'tenant',
+                'nama_lengkap_ktp' => 'Antoni Silha',
+                'nik_ktp' => '3171010101010000',
+                'no_whatsapp' => '081234567890',
+                'foto_ktp' => 'ktp/seed-owner.jpg',
             ]
         );
 
@@ -52,7 +53,7 @@ class DatabaseSeeder extends Seeder
         $tenantsData = [
             [
                 'id_tenant' => 1,
-                'google_id_token' => 'google_antoni_01',
+                'google_id_token' => $account->id_user_google,
                 'id_akun_pemilik' => $user->id_akun ?? 1,
                 'nama_toko' => 'Indonesia Battery',
                 'bio_deskripsi' => 'Penyedia gear shooting terpercaya di Jawa Timur, spesialis cinema camera Sony FX series & Zeiss lenses.',
@@ -67,7 +68,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'id_tenant' => 2,
-                'google_id_token' => 'google_antoni_01',
+                'google_id_token' => $account->id_user_google,
                 'id_akun_pemilik' => $user->id_akun ?? 1,
                 'nama_toko' => 'Studio Proyek ID',
                 'bio_deskripsi' => 'Pusat sewa kamera mirrorless, rigging stabilizer, & sound recorder profesional untuk kebutuhan video komersial.',
@@ -82,7 +83,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'id_tenant' => 3,
-                'google_id_token' => 'google_antoni_01',
+                'google_id_token' => $account->id_user_google,
                 'id_akun_pemilik' => $user->id_akun ?? 1,
                 'nama_toko' => 'Koo Gallery',
                 'bio_deskripsi' => 'Rental kamera & studio modern terlengkap di Solo dan sekitarnya. Menyediakan paket lighting studio, flash wireless, dan kamera pro.',
@@ -214,6 +215,79 @@ class DatabaseSeeder extends Seeder
                     'updated_at' => now(),
                 ]
             );
+        }
+
+        // 5. Verifikasi KTP untuk semua user yang ada
+        $allUsers = User::all();
+        foreach ($allUsers as $u) {
+            \Illuminate\Support\Facades\DB::table('verifikasi_ktp')->updateOrInsert(
+                ['id_akun' => $u->id_akun],
+                [
+                    'nik_ktp' => $u->nik_ktp ?? '351001234567000' . $u->id_akun,
+                    'url_foto_ktp' => $u->foto_ktp ?? 'ktp/user-' . $u->id_akun . '.jpg',
+                    'status_verifikasi' => 'Terverifikasi',
+                    'waktu_verifikasi' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+        }
+
+        // 6. Detail Pemesanan Tenant (Orders)
+        $ktpList = \Illuminate\Support\Facades\DB::table('verifikasi_ktp')->pluck('id_ktp');
+        $orderCounter = 1;
+
+        foreach ($ktpList as $ktpId) {
+            $ordersSeed = [
+                [
+                    'sub_order_eksternal' => 'MC-20261024-00' . $orderCounter,
+                    'id_tenant' => 1,
+                    'id_produk' => 1,
+                    'id_ktp' => $ktpId,
+                    'url_foto_ktp' => 'ktp/ktp-sample.jpg',
+                    'waktu_ambil_booking' => '2026-10-24 09:00:00',
+                    'waktu_kembali_booking' => '2026-10-27 18:00:00',
+                    'durasi_sewa_hari' => 3,
+                    'harga_sewa_booking' => 550000.00,
+                    'total_harga' => 1650000.00,
+                    'status_sewa' => 'Sedang Disewa',
+                ],
+                [
+                    'sub_order_eksternal' => 'MC-20261024-00' . ($orderCounter + 1),
+                    'id_tenant' => 1,
+                    'id_produk' => 2,
+                    'id_ktp' => $ktpId,
+                    'url_foto_ktp' => 'ktp/ktp-sample.jpg',
+                    'waktu_ambil_booking' => '2026-10-24 09:00:00',
+                    'waktu_kembali_booking' => '2026-10-27 18:00:00',
+                    'durasi_sewa_hari' => 3,
+                    'harga_sewa_booking' => 250000.00,
+                    'total_harga' => 750000.00,
+                    'status_sewa' => 'Sedang Disewa',
+                ],
+                [
+                    'sub_order_eksternal' => 'MC-20261015-00' . ($orderCounter + 2),
+                    'id_tenant' => 3,
+                    'id_produk' => 3,
+                    'id_ktp' => $ktpId,
+                    'url_foto_ktp' => 'ktp/ktp-sample.jpg',
+                    'waktu_ambil_booking' => '2026-10-15 08:00:00',
+                    'waktu_kembali_booking' => '2026-10-18 18:00:00',
+                    'durasi_sewa_hari' => 3,
+                    'harga_sewa_booking' => 400000.00,
+                    'total_harga' => 1200000.00,
+                    'status_sewa' => 'Selesai',
+                ],
+            ];
+
+            foreach ($ordersSeed as $ord) {
+                \Illuminate\Support\Facades\DB::table('detail_pemesanan_tenants')->updateOrInsert(
+                    ['sub_order_eksternal' => $ord['sub_order_eksternal']],
+                    $ord + ['created_at' => now(), 'updated_at' => now()]
+                );
+            }
+
+            $orderCounter += 3;
         }
     }
 }

@@ -19,8 +19,10 @@ class UserProfileResource extends JsonResource
         $user = $this->resource;
         $name = is_object($user) && isset($user->name) ? (string) $user->name : 'Antoni Silha';
 
-        if ($user instanceof User) {
+        if ($user instanceof User && method_exists($user, 'initials')) {
             $initials = $user->initials();
+        } elseif (is_object($user) && isset($user->initials)) {
+            $initials = (string) $user->initials;
         } else {
             $initials = Str::length($name) > 1
                 ? Str::upper(Str::substr($name, 0, 1).Str::substr(explode(' ', $name)[1] ?? $name, 0, 1))

@@ -1,6 +1,6 @@
 @props([
-    'activeFilter' => 'all',
-    'counts' => ['all' => 3, 'renting' => 1, 'completed' => 1],
+    'activeFilter' => 'semua',
+    'counts' => ['semua' => 0, 'sedang_disewa' => 0, 'selesai' => 0],
     'activeSort' => 'terbaru',
 ])
 
@@ -8,22 +8,25 @@
     <!-- Filter Tabs -->
     <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
         <!-- Semua Pesanan -->
-        <a href="{{ route('dashboard', ['filter' => 'all', 'sort' => $activeSort]) }}"
-           class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ in_array($activeFilter, ['all', 'semua', '']) ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
-            Semua Pesanan ({{ $counts['all'] ?? 0 }})
-        </a>
+        <button type="button"
+                wire:click="setFilter('semua')"
+                class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ $activeFilter === 'semua' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
+            Semua Pesanan ({{ $counts['semua'] ?? 0 }})
+        </button>
 
         <!-- Sedang Disewa -->
-        <a href="{{ route('dashboard', ['filter' => 'sedang-disewa', 'sort' => $activeSort]) }}"
-           class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ in_array($activeFilter, ['sedang-disewa', 'renting']) ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
-            Sedang Disewa ({{ $counts['renting'] ?? 0 }})
-        </a>
+        <button type="button"
+                wire:click="setFilter('sedang_disewa')"
+                class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ $activeFilter === 'sedang_disewa' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
+            Sedang Disewa ({{ $counts['sedang_disewa'] ?? 0 }})
+        </button>
 
         <!-- Selesai -->
-        <a href="{{ route('dashboard', ['filter' => 'selesai', 'sort' => $activeSort]) }}"
-           class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ in_array($activeFilter, ['selesai', 'completed']) ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
-            Selesai ({{ $counts['completed'] ?? 0 }})
-        </a>
+        <button type="button"
+                wire:click="setFilter('selesai')"
+                class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ $activeFilter === 'selesai' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
+            Selesai ({{ $counts['selesai'] ?? 0 }})
+        </button>
     </div>
 
     <!-- Sort Dropdown -->
@@ -31,14 +34,10 @@
         <label for="sort-select" class="text-neutral-500 whitespace-nowrap">Urutan:</label>
         <div class="relative">
             <select id="sort-select"
-                    onchange="window.location.href = this.value"
+                    wire:model.live="activeSort"
                     class="appearance-none bg-transparent pr-6 pl-1 py-1 font-bold text-black text-xs cursor-pointer focus:outline-hidden">
-                <option value="{{ route('dashboard', ['filter' => $activeFilter, 'sort' => 'terbaru']) }}" {{ $activeSort === 'terbaru' ? 'selected' : '' }}>
-                    Terbaru
-                </option>
-                <option value="{{ route('dashboard', ['filter' => $activeFilter, 'sort' => 'terlama']) }}" {{ $activeSort === 'terlama' ? 'selected' : '' }}>
-                    Terlama
-                </option>
+                <option value="terbaru">Terbaru</option>
+                <option value="terlama">Terlama</option>
             </select>
             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center text-neutral-500">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

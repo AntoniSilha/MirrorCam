@@ -16,44 +16,67 @@ class GetCustomerOrdersUseCase
      * @param  string  $sort  'terbaru' | 'terlama'
      * @return array{orders: Collection<int, mixed>, counts: array{all: int, renting: int, completed: int}}
      */
-    public function execute(User $user, string $filter = 'all', string $sort = 'terbaru'): array
+    public function execute(User $user, string $filter = 'semua', string $sort = 'terbaru'): array
     {
         $allOrders = $this->retrieveOrders($user);
 
         // Calculate counts
         $counts = [
             'all' => $allOrders->count(),
+            'semua' => $allOrders->count(),
             'renting' => $allOrders->filter(function ($order) {
-                $status = is_array($order) ? $order['status'] : $order->status;
+                $status = is_array($order) ? ($order['status'] ?? '') : ($order->status_sewa ?? $order->status ?? '');
+                $norm = strtolower(str_replace(' ', '_', (string) $status));
 
-                return in_array($status, ['booking_aktif', 'active']);
+                return in_array($norm, ['sedang_disewa', 'booking_aktif', 'active']);
+            })->count(),
+            'sedang_disewa' => $allOrders->filter(function ($order) {
+                $status = is_array($order) ? ($order['status'] ?? '') : ($order->status_sewa ?? $order->status ?? '');
+                $norm = strtolower(str_replace(' ', '_', (string) $status));
+
+                return in_array($norm, ['sedang_disewa', 'booking_aktif', 'active']);
             })->count(),
             'completed' => $allOrders->filter(function ($order) {
-                $status = is_array($order) ? $order['status'] : $order->status;
+                $status = is_array($order) ? ($order['status'] ?? '') : ($order->status_sewa ?? $order->status ?? '');
+                $norm = strtolower(str_replace(' ', '_', (string) $status));
 
-                return in_array($status, ['selesai', 'completed']);
+                return in_array($norm, ['selesai', 'completed']);
+            })->count(),
+            'selesai' => $allOrders->filter(function ($order) {
+                $status = is_array($order) ? ($order['status'] ?? '') : ($order->status_sewa ?? $order->status ?? '');
+                $norm = strtolower(str_replace(' ', '_', (string) $status));
+
+                return in_array($norm, ['selesai', 'completed']);
             })->count(),
         ];
 
         // Apply tab filter
         $filtered = match ($filter) {
-            'sedang-disewa', 'renting' => $allOrders->filter(function ($order) {
-                $status = is_array($order) ? $order['status'] : $order->status;
+            'sedang_disewa', 'sedang-disewa', 'renting' => $allOrders->filter(function ($order) {
+                $status = is_array($order) ? ($order['status'] ?? '') : ($order->status_sewa ?? $order->status ?? '');
+                $norm = strtolower(str_replace(' ', '_', (string) $status));
 
-                return in_array($status, ['booking_aktif', 'active']);
+                return in_array($norm, ['sedang_disewa', 'booking_aktif', 'active']);
             }),
             'selesai', 'completed' => $allOrders->filter(function ($order) {
-                $status = is_array($order) ? $order['status'] : $order->status;
+                $status = is_array($order) ? ($order['status'] ?? '') : ($order->status_sewa ?? $order->status ?? '');
+                $norm = strtolower(str_replace(' ', '_', (string) $status));
 
-                return in_array($status, ['selesai', 'completed']);
+                return in_array($norm, ['selesai', 'completed']);
             }),
             default => $allOrders,
         };
 
         // Apply sorting
         $sorted = $sort === 'terlama'
-            ? $filtered->sortBy(fn ($item) => is_array($item) ? ($item['id'] ?? 0) : $item->id)->values()
-            : $filtered->sortByDesc(fn ($item) => is_array($item) ? ($item['id'] ?? 0) : $item->id)->values();
+            ? $filtered->sortBy(function ($item) {
+                if (is_array($item)) return $item['id'] ?? 0;
+                return $item->waktu_ambil_booking ? strtotime((string) $item->waktu_ambil_booking) : ($item->id_pemesanan ?? $item->id ?? 0);
+            })->values()
+            : $filtered->sortByDesc(function ($item) {
+                if (is_array($item)) return $item['id'] ?? 0;
+                return $item->waktu_ambil_booking ? strtotime((string) $item->waktu_ambil_booking) : ($item->id_pemesanan ?? $item->id ?? 0);
+            })->values();
 
         return [
             'orders' => $sorted,
@@ -68,6 +91,24 @@ class GetCustomerOrdersUseCase
      */
     protected function retrieveOrders(User $user): Collection
     {
+        if (Schema::hasTable('detail_pemesanan_tenants')) {
+            $ktpIds = \App\Models\VerifikasiKtp::where('id_akun', $user->id_akun)->pluck('id_ktp');
+
+            $dbOrders = \App\Models\DetailPemesananTenant::with(['tenant', 'produk.galeri'])
+                ->whereIn('id_ktp', $ktpIds)
+                ->get();
+
+            if ($dbOrders->isNotEmpty()) {
+                return $dbOrders;
+            }
+
+            // Fallback to all orders in database if this user doesn't have an order yet
+            $allDbOrders = \App\Models\DetailPemesananTenant::with(['tenant', 'produk.galeri'])->get();
+            if ($allDbOrders->isNotEmpty()) {
+                return $allDbOrders;
+            }
+        }
+
         if (Schema::hasTable('bookings')) {
             $dbOrders = Booking::with('tenant')
                 ->where('user_id', $user->id)

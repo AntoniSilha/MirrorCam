@@ -50,7 +50,7 @@
                     <div class="flex items-center gap-3">
                         <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 px-3 py-1.5 rounded-[4px] hover:bg-[#f9f9f9] border border-transparent hover:border-[#e5e5e5] transition">
                             <div class="w-7 h-7 rounded-full bg-[#000000] text-white flex items-center justify-center text-xs font-bold">
-                                {{ auth()->user()->initials() ?? 'US' }}
+                                {{ method_exists(auth()->user(), 'initials') ? auth()->user()->initials() : (auth()->user()->initials ?? 'US') }}
                             </div>
                             <span class="text-xs font-semibold text-[#000000] hidden sm:inline">{{ auth()->user()->name }}</span>
                         </a>
