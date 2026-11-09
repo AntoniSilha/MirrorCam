@@ -8,7 +8,7 @@
 
     <!-- Category Grid -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        @foreach ($categories as $category)
+        @forelse ($categories as $category)
             <a
                 href="{{ route('home', ['category_id' => $category['id']]) }}#katalog"
                 class="bg-[#ffffff] border border-[#e5e5e5] hover:border-[#000000] rounded-[4px] p-4 flex flex-col items-center justify-center text-center transition group hover:shadow-xs"
@@ -65,6 +65,10 @@
                     {{ $category['name'] }}
                 </span>
             </a>
-        @endforeach
+        @empty
+            <div class="col-span-full py-8 text-center bg-[#ffffff] border border-[#e5e5e5] rounded-[4px] p-6">
+                <p class="text-xs text-gray-500">Belum ada kategori peralatan.</p>
+            </div>
+        @endforelse
     </div>
 </section>

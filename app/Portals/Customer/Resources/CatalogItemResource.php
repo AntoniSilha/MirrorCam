@@ -33,8 +33,8 @@ class CatalogItemResource extends JsonResource
             : ($this->resource['category_name'] ?? 'Kamera');
 
         $price = $isModel
-            ? (float) ($this->resource->harga_sewa ?? 250000)
-            : (float) ($this->resource['harga_sewa'] ?? 250000);
+            ? (float) ($this->resource->harga_sewa ?? 0)
+            : (float) ($this->resource['harga_sewa'] ?? 0);
 
         $priceUnit = $isModel
             ? ($this->resource->price_unit ?? 'hari')
@@ -49,16 +49,16 @@ class CatalogItemResource extends JsonResource
             : ($this->resource['image'] ?? $this->resource['thumbnail_url'] ?? '/images/gear/placeholder.jpg');
 
         $rating = $isModel
-            ? (float) ($this->resource->rating ?? 4.9)
-            : (float) ($this->resource['rating'] ?? 4.9);
+            ? (float) ($this->resource->rating ?? 5.0)
+            : (float) ($this->resource['rating'] ?? 5.0);
 
         $reviews = $isModel
-            ? (int) ($this->resource->review_count ?? 24)
-            : (int) ($this->resource['review_count'] ?? $this->resource['reviews'] ?? 24);
+            ? (int) ($this->resource->review_count ?? 0)
+            : (int) ($this->resource['review_count'] ?? $this->resource['reviews'] ?? 0);
 
         $stock = $isModel
-            ? (int) ($this->resource->total_stok_unit ?? 1)
-            : (int) ($this->resource['total_stok_unit'] ?? $this->resource['stock'] ?? 1);
+            ? (int) ($this->resource->total_stok_unit ?? 0)
+            : (int) ($this->resource['total_stok_unit'] ?? $this->resource['stock'] ?? 0);
 
         $isAvailable = $stock > 0;
 

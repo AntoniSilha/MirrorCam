@@ -38,16 +38,16 @@ class TenantSummaryResource extends JsonResource
             : ($this->resource['bio_deskripsi'] ?? $this->resource['bio'] ?? '');
 
         $rating = $isModel
-            ? (float) ($this->resource->rating ?? 4.9)
-            : (float) ($this->resource['rating'] ?? 4.9);
+            ? (float) ($this->resource->rating ?? 5.0)
+            : (float) ($this->resource['rating'] ?? 5.0);
 
         $unitReady = $isModel
-            ? (int) ($this->resource->unit_ready ?? 48)
-            : (int) ($this->resource['unit_ready'] ?? 48);
+            ? (int) ($this->resource->products_count ?? $this->resource->unit_ready ?? 0)
+            : (int) ($this->resource['unit_ready'] ?? $this->resource['products_count'] ?? 0);
 
         $location = $isModel
-            ? ($this->resource->kota ?? $this->resource->location ?? 'Banyuwangi')
-            : ($this->resource['kota'] ?? $this->resource['location'] ?? 'Banyuwangi');
+            ? ($this->resource->kota ?? $this->resource->location ?? 'Indonesia')
+            : ($this->resource['kota'] ?? $this->resource['location'] ?? 'Indonesia');
 
         $badge = $isModel
             ? ($this->resource->badge_text ?? 'OFFICIAL PARTNER')
@@ -76,7 +76,7 @@ class TenantSummaryResource extends JsonResource
             'location' => $location,
             'badge' => $badge,
             'is_official' => $isOfficial,
-            'whatsapp' => $isModel ? ($this->resource->whatsapp_resmi ?? '6281234567890') : ($this->resource['whatsapp_resmi'] ?? '6281234567890'),
+            'whatsapp' => $isModel ? ($this->resource->whatsapp_resmi ?? '') : ($this->resource['whatsapp_resmi'] ?? ''),
         ];
     }
 }

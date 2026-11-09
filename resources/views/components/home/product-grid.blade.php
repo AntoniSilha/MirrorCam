@@ -32,29 +32,45 @@
         @empty
             <div class="col-span-full py-12 text-center bg-[#ffffff] border border-[#e5e5e5] rounded-[4px] p-8">
                 <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 </svg>
-                <h3 class="text-sm font-bold text-[#000000]">Tidak ada gear yang cocok dengan pencarian</h3>
-                <p class="text-xs text-gray-500 mt-1">Coba gunakan kata kunci lain atau reset pilihan filter tanggal dan tenant.</p>
-                <div class="mt-4">
-                    <a href="{{ route('home') }}#katalog" class="inline-block px-4 py-2 bg-[#000000] text-white text-xs font-bold rounded-[4px]">
-                        Tampilkan Semua Gear
-                    </a>
-                </div>
+                @if ($hasSearch)
+                    <h3 class="text-sm font-bold text-[#000000]">Tidak ada gear yang cocok dengan pencarian</h3>
+                    <p class="text-xs text-gray-500 mt-1">Coba gunakan kata kunci lain atau reset pilihan filter tanggal dan tenant.</p>
+                    <div class="mt-4">
+                        <a href="{{ route('home') }}#katalog" class="inline-block px-4 py-2 bg-[#000000] text-white text-xs font-bold rounded-[4px]">
+                            Tampilkan Semua Gear
+                        </a>
+                    </div>
+                @else
+                    <h3 class="text-sm font-bold text-[#000000]">Belum ada peralatan kamera yang tersedia</h3>
+                    <p class="text-xs text-gray-500 mt-1">Peralatan kamera dan gear rental akan muncul setelah ditambahkan oleh mitra tenant.</p>
+                    @auth
+                        @if (Auth::user()->role === 'tenant')
+                            <div class="mt-4">
+                                <a href="{{ route('mitra.dashboard') }}" class="inline-block px-4 py-2 bg-[#000000] text-white text-xs font-bold rounded-[4px]">
+                                    Tambah Produk di Dashboard Mitra
+                                </a>
+                            </div>
+                        @endif
+                    @endauth
+                @endif
             </div>
         @endforelse
     </div>
 
-    <!-- Bottom Outlined Action Button -->
-    <div class="mt-8 text-center">
-        <a
-            href="{{ route('home') }}#katalog"
-            class="inline-flex items-center gap-2 px-6 py-2.5 bg-[#ffffff] hover:bg-[#f2f2f2] text-[#000000] text-xs font-bold rounded-[4px] border border-[#000000] transition shadow-xs"
-        >
-            <span>Tampilkan Lebih Banyak Rekomendasi Gear</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-            </svg>
-        </a>
-    </div>
+    @if (count($featuredProducts) > 0)
+        <!-- Bottom Outlined Action Button -->
+        <div class="mt-8 text-center">
+            <a
+                href="{{ route('home') }}#katalog"
+                class="inline-flex items-center gap-2 px-6 py-2.5 bg-[#ffffff] hover:bg-[#f2f2f2] text-[#000000] text-xs font-bold rounded-[4px] border border-[#000000] transition shadow-xs"
+            >
+                <span>Tampilkan Lebih Banyak Rekomendasi Gear</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                </svg>
+            </a>
+        </div>
+    @endif
 </section>

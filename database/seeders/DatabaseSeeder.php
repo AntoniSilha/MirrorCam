@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\AccountGoogle;
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,23 +15,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $account = AccountGoogle::query()->updateOrCreate(
-            ['id_user_google' => 'seed-owner-mirrorcam'],
-            ['email' => 'antoni@mirrorcam.com']
-        );
-
-        $user = User::query()->updateOrCreate(
-            ['id_user_google' => $account->id_user_google],
-            [
-                'role' => 'tenant',
-                'nama_lengkap_ktp' => 'Antoni Silha',
-                'nik_ktp' => '3171010101010000',
-                'no_whatsapp' => '081234567890',
-                'foto_ktp' => 'ktp/seed-owner.jpg',
-            ]
-        );
-
-        // 1. Kategori Produk
+        // 1. Kategori Produk (Master Data Kategori)
         $categoriesData = [
             ['id_kategori' => 1, 'nama_kategori' => 'Kamera Cinema & Mirrorless'],
             ['id_kategori' => 2, 'nama_kategori' => 'Lensa Prime & Cine'],
@@ -43,251 +26,10 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($categoriesData as $cat) {
-            \Illuminate\Support\Facades\DB::table('kategori_produk')->updateOrInsert(
+            DB::table('kategori_produk')->updateOrInsert(
                 ['id_kategori' => $cat['id_kategori']],
                 ['nama_kategori' => $cat['nama_kategori'], 'created_at' => now(), 'updated_at' => now()]
             );
-        }
-
-        // 2. Tenants Mitra Resmi
-        $tenantsData = [
-            [
-                'id_tenant' => 1,
-                'google_id_token' => $account->id_user_google,
-                'id_akun_pemilik' => $user->id_akun ?? 1,
-                'nama_toko' => 'Indonesia Battery',
-                'bio_deskripsi' => 'Penyedia gear shooting terpercaya di Jawa Timur, spesialis cinema camera Sony FX series & Zeiss lenses.',
-                'url_logo' => null,
-                'whatsapp_resmi' => '6281234567890',
-                'nama_penanggungjawab' => 'Budi Santoso',
-                'jabatan_penanggungjawab' => 'Founder & Rental Lead',
-                'email_resmi' => 'indonesiabattery@gmail.com',
-                'alamat_toko' => 'Jl. Ahmad Yani No. 45, Banyuwangi',
-                'koordinat_lokasi' => '-8.2192, 114.3692',
-                'status_mitra' => 'official',
-            ],
-            [
-                'id_tenant' => 2,
-                'google_id_token' => $account->id_user_google,
-                'id_akun_pemilik' => $user->id_akun ?? 1,
-                'nama_toko' => 'Studio Proyek ID',
-                'bio_deskripsi' => 'Pusat sewa kamera mirrorless, rigging stabilizer, & sound recorder profesional untuk kebutuhan video komersial.',
-                'url_logo' => null,
-                'whatsapp_resmi' => '6281987654321',
-                'nama_penanggungjawab' => 'Dimas Prakoso',
-                'jabatan_penanggungjawab' => 'Operations Lead',
-                'email_resmi' => 'studioproyek@gmail.com',
-                'alamat_toko' => 'Ruko Darmo Park II, Surabaya',
-                'koordinat_lokasi' => '-7.2891, 112.7344',
-                'status_mitra' => 'official',
-            ],
-            [
-                'id_tenant' => 3,
-                'google_id_token' => $account->id_user_google,
-                'id_akun_pemilik' => $user->id_akun ?? 1,
-                'nama_toko' => 'Koo Gallery',
-                'bio_deskripsi' => 'Rental kamera & studio modern terlengkap di Solo dan sekitarnya. Menyediakan paket lighting studio, flash wireless, dan kamera pro.',
-                'url_logo' => null,
-                'whatsapp_resmi' => '6281122334455',
-                'nama_penanggungjawab' => 'Kevin Koo',
-                'jabatan_penanggungjawab' => 'Managing Director',
-                'email_resmi' => 'koogallery@gmail.com',
-                'alamat_toko' => 'Jl. Slamet Riyadi No. 120, Bandung',
-                'koordinat_lokasi' => '-6.9175, 107.6191',
-                'status_mitra' => 'official',
-            ],
-        ];
-
-        foreach ($tenantsData as $tenant) {
-            \Illuminate\Support\Facades\DB::table('tenants')->updateOrInsert(
-                ['id_tenant' => $tenant['id_tenant']],
-                $tenant + ['created_at' => now(), 'updated_at' => now()]
-            );
-        }
-
-        // 3. Produks Rekomendasi Gear
-        $productsData = [
-            [
-                'id_produk' => 1,
-                'id_tenant' => 1,
-                'id_kategori' => 1,
-                'nama_produk' => 'Sony FX30 Cinema Line Full...',
-                'color_produk' => 'Hitam Matte',
-                'deskripsi_lengkap' => 'Kamera cinema line dengan sensor Super 35 4K 120fps, profil warna S-Cinetone, dan dual base ISO.',
-                'harga_sewa' => 550000.00,
-                'total_stok_unit' => 5,
-                'image' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80',
-            ],
-            [
-                'id_produk' => 2,
-                'id_tenant' => 1,
-                'id_kategori' => 2,
-                'nama_produk' => 'Sony FE 24–70 mm f/2.8 GM II',
-                'color_produk' => 'Hitam',
-                'deskripsi_lengkap' => 'Lensa zoom standar profesional G Master generasi kedua dengan resolusi optik luar biasa dan bobot lebih ringan.',
-                'harga_sewa' => 250000.00,
-                'total_stok_unit' => 8,
-                'image' => 'https://images.unsplash.com/photo-1617005082133-548c4dd27f35?auto=format&fit=crop&w=600&q=80',
-            ],
-            [
-                'id_produk' => 3,
-                'id_tenant' => 3,
-                'id_kategori' => 1,
-                'nama_produk' => 'Canon EOS R6 Mark II (Body)',
-                'color_produk' => 'Hitam',
-                'deskripsi_lengkap' => 'Kamera mirrorless full-frame 24.2MP dengan kecepatan burst hingga 40 fps dan rekaman 4K 60p oversampled.',
-                'harga_sewa' => 400000.00,
-                'total_stok_unit' => 4,
-                'image' => 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=600&q=80',
-            ],
-            [
-                'id_produk' => 4,
-                'id_tenant' => 2,
-                'id_kategori' => 1,
-                'nama_produk' => 'Sony Alpha 7 IV (A7 IV) Body',
-                'color_produk' => 'Hitam',
-                'deskripsi_lengkap' => 'Kamera hybrid 33MP dengan sensor Exmor R BSI dan prosesor BIONZ XR untuk foto dan video profesional.',
-                'harga_sewa' => 350000.00,
-                'total_stok_unit' => 6,
-                'image' => 'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=600&q=80',
-            ],
-            [
-                'id_produk' => 5,
-                'id_tenant' => 3,
-                'id_kategori' => 6,
-                'nama_produk' => 'Sewa Studio Sun Gallery',
-                'color_produk' => 'Putih Studio',
-                'deskripsi_lengkap' => 'Ruang studio foto & syuting lengkap dengan cyclorama wall, make up room, lighting ceiling, dan AC 2 PK.',
-                'harga_sewa' => 150000.00,
-                'total_stok_unit' => 2,
-                'image' => 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80',
-            ],
-            [
-                'id_produk' => 6,
-                'id_tenant' => 2,
-                'id_kategori' => 3,
-                'nama_produk' => 'Aputure LS 600d Pro + Light...',
-                'color_produk' => 'Hitam Abu',
-                'deskripsi_lengkap' => 'Lampu LED daylight continuous point-source 600W dengan Bowens mount, Weather-resistant, dan wireless control.',
-                'harga_sewa' => 375000.00,
-                'total_stok_unit' => 3,
-                'image' => 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=600&q=80',
-            ],
-            [
-                'id_produk' => 7,
-                'id_tenant' => 2,
-                'id_kategori' => 5,
-                'nama_produk' => 'DJI Ronin RS 3 Pro Gimbal...',
-                'color_produk' => 'Hitam Karbon',
-                'deskripsi_lengkap' => 'Gimbal stabilizer 3-axis dengan lengan serat karbon, motor focus LiDAR, dan kapasitas beban hingga 4.5 kg.',
-                'harga_sewa' => 220000.00,
-                'total_stok_unit' => 5,
-                'image' => 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80',
-            ],
-            [
-                'id_produk' => 8,
-                'id_tenant' => 3,
-                'id_kategori' => 2,
-                'nama_produk' => 'Canon RF 50mm f/1.2L USM...',
-                'color_produk' => 'Hitam',
-                'deskripsi_lengkap' => 'Lensa prime legendaris seri L untuk mount Canon RF dengan aperture f/1.2 ultra-terang dan bokeh lembut sinematik.',
-                'harga_sewa' => 280000.00,
-                'total_stok_unit' => 7,
-                'image' => 'https://images.unsplash.com/photo-1622818451877-c999331f4a9b?auto=format&fit=crop&w=600&q=80',
-            ],
-        ];
-
-        foreach ($productsData as $prod) {
-            $image = $prod['image'];
-            unset($prod['image']);
-
-            \Illuminate\Support\Facades\DB::table('produks')->updateOrInsert(
-                ['id_produk' => $prod['id_produk']],
-                $prod + ['created_at' => now(), 'updated_at' => now()]
-            );
-
-            // 4. Galeri Foto Produk
-            \Illuminate\Support\Facades\DB::table('galeri_foto_produks')->updateOrInsert(
-                ['id_produk' => $prod['id_produk']],
-                [
-                    'url_foto_produk' => $image,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
-            );
-        }
-
-        // 5. Verifikasi KTP untuk semua user yang ada
-        $allUsers = User::all();
-        foreach ($allUsers as $u) {
-            \Illuminate\Support\Facades\DB::table('verifikasi_ktp')->updateOrInsert(
-                ['id_akun' => $u->id_akun],
-                [
-                    'nik_ktp' => $u->nik_ktp ?? '351001234567000' . $u->id_akun,
-                    'url_foto_ktp' => $u->foto_ktp ?? 'ktp/user-' . $u->id_akun . '.jpg',
-                    'status_verifikasi' => 'Terverifikasi',
-                    'waktu_verifikasi' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
-            );
-        }
-
-        // 6. Detail Pemesanan Tenant (Orders)
-        $ktpList = \Illuminate\Support\Facades\DB::table('verifikasi_ktp')->pluck('id_ktp');
-        $orderCounter = 1;
-
-        foreach ($ktpList as $ktpId) {
-            $ordersSeed = [
-                [
-                    'sub_order_eksternal' => 'MC-20261024-00' . $orderCounter,
-                    'id_tenant' => 1,
-                    'id_produk' => 1,
-                    'id_ktp' => $ktpId,
-                    'url_foto_ktp' => 'ktp/ktp-sample.jpg',
-                    'waktu_ambil_booking' => '2026-10-24 09:00:00',
-                    'waktu_kembali_booking' => '2026-10-27 18:00:00',
-                    'durasi_sewa_hari' => 3,
-                    'harga_sewa_booking' => 550000.00,
-                    'total_harga' => 1650000.00,
-                    'status_sewa' => 'Sedang Disewa',
-                ],
-                [
-                    'sub_order_eksternal' => 'MC-20261024-00' . ($orderCounter + 1),
-                    'id_tenant' => 1,
-                    'id_produk' => 2,
-                    'id_ktp' => $ktpId,
-                    'url_foto_ktp' => 'ktp/ktp-sample.jpg',
-                    'waktu_ambil_booking' => '2026-10-24 09:00:00',
-                    'waktu_kembali_booking' => '2026-10-27 18:00:00',
-                    'durasi_sewa_hari' => 3,
-                    'harga_sewa_booking' => 250000.00,
-                    'total_harga' => 750000.00,
-                    'status_sewa' => 'Sedang Disewa',
-                ],
-                [
-                    'sub_order_eksternal' => 'MC-20261015-00' . ($orderCounter + 2),
-                    'id_tenant' => 3,
-                    'id_produk' => 3,
-                    'id_ktp' => $ktpId,
-                    'url_foto_ktp' => 'ktp/ktp-sample.jpg',
-                    'waktu_ambil_booking' => '2026-10-15 08:00:00',
-                    'waktu_kembali_booking' => '2026-10-18 18:00:00',
-                    'durasi_sewa_hari' => 3,
-                    'harga_sewa_booking' => 400000.00,
-                    'total_harga' => 1200000.00,
-                    'status_sewa' => 'Selesai',
-                ],
-            ];
-
-            foreach ($ordersSeed as $ord) {
-                \Illuminate\Support\Facades\DB::table('detail_pemesanan_tenants')->updateOrInsert(
-                    ['sub_order_eksternal' => $ord['sub_order_eksternal']],
-                    $ord + ['created_at' => now(), 'updated_at' => now()]
-                );
-            }
-
-            $orderCounter += 3;
         }
     }
 }

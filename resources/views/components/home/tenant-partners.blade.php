@@ -8,7 +8,7 @@
 
     <!-- Tenant Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        @foreach ($tenants as $tenant)
+        @forelse ($tenants as $tenant)
             <div class="bg-[#ffffff] border border-[#e5e5e5] rounded-[4px] p-6 flex flex-col justify-between shadow-xs hover:border-[#000000] transition group">
                 <div>
                     <!-- Tenant Top Header -->
@@ -70,19 +70,38 @@
                     </a>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <div class="col-span-full py-12 text-center bg-[#ffffff] border border-[#e5e5e5] rounded-[4px] p-8">
+                <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <h3 class="text-sm font-bold text-[#000000]">Belum ada mitra tenant resmi terdaftar</h3>
+                <p class="text-xs text-gray-500 mt-1">Mitra penyewaan kamera dan gear yang terdaftar akan ditampilkan di sini.</p>
+                @auth
+                    @if (Auth::user()->role === 'tenant')
+                        <div class="mt-4">
+                            <a href="{{ route('mitra.dashboard') }}" class="inline-block px-4 py-2 bg-[#000000] text-white text-xs font-bold rounded-[4px]">
+                                Kelola Toko di Dashboard Mitra
+                            </a>
+                        </div>
+                    @endif
+                @endauth
+            </div>
+        @endforelse
     </div>
 
-    <!-- Bottom Outlined Action Button -->
-    <div class="mt-8 text-center">
-        <a
-            href="{{ route('home') }}#mitra-tenant"
-            class="inline-flex items-center gap-2 px-6 py-2.5 bg-[#ffffff] hover:bg-[#f2f2f2] text-[#000000] text-xs font-bold rounded-[4px] border border-[#000000] transition shadow-xs"
-        >
-            <span>Lihat Semua Mitra Tenant Rekanan</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-            </svg>
-        </a>
-    </div>
+    @if (count($tenants) > 0)
+        <!-- Bottom Outlined Action Button -->
+        <div class="mt-8 text-center">
+            <a
+                href="{{ route('home') }}#mitra-tenant"
+                class="inline-flex items-center gap-2 px-6 py-2.5 bg-[#ffffff] hover:bg-[#f2f2f2] text-[#000000] text-xs font-bold rounded-[4px] border border-[#000000] transition shadow-xs"
+            >
+                <span>Lihat Semua Mitra Tenant Rekanan</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                </svg>
+            </a>
+        </div>
+    @endif
 </section>
