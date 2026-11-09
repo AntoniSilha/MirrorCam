@@ -1,0 +1,44 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            if (! Schema::hasColumn('users', 'google_id')) {
+                $table->string('google_id')->nullable()->index()->after('id_akun');
+            }
+
+            if (! Schema::hasColumn('users', 'avatar')) {
+                $table->string('avatar')->nullable();
+            }
+
+            // Cek dulu apakah kolom password ada sebelum di-change
+            if (Schema::hasColumn('users', 'password')) {
+                $table->string('password')->nullable()->change();
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            if (Schema::hasColumn('users', 'google_id')) {
+                $table->dropIndex(['google_id']);
+                $table->dropColumn('google_id');
+            }
+
+            if (Schema::hasColumn('users', 'avatar')) {
+                $table->dropColumn('avatar');
+            }
+
+            if (Schema::hasColumn('users', 'password')) {
+                $table->string('password')->nullable(false)->change();
+            }
+        });
+    }
+};

@@ -4,13 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('mitras', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+
+            // Relasi foreign key yang menunjuk ke id_akun
+            $table->foreignId('user_id')->constrained('users', 'id_akun')->onDelete('cascade');
 
             // Section 01 & 02: Informasi Toko / Workshop
             $table->string('nama_toko');
