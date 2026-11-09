@@ -1,25 +1,36 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\Authentication\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\AccountGoogle;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
+use Laravel\Socialite\Two\User as SocialiteUser;
+use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
-class GoogleAuthController extends Controller
+class GoogleRegistrationController extends Controller
 {
-    public function redirect()
+    public function redirect(): SymfonyRedirectResponse
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        /** @var AbstractProvider $driver */
+        $driver = Socialite::driver('google');
+
+        return $driver->stateless()->redirect();
     }
 
-    public function callback()
+    public function callback(): RedirectResponse
     {
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            /** @var AbstractProvider $driver */
+            $driver = Socialite::driver('google');
+            /** @var SocialiteUser $googleUser */
+            $googleUser = $driver->stateless()->user();
 
             $accountGoogle = AccountGoogle::firstOrCreate(
                 ['id_user_google' => $googleUser->id],
@@ -47,7 +58,7 @@ class GoogleAuthController extends Controller
         }
     }
 
-    public function storeDataProfile(Request $request)
+    public function storeDataProfile(Request $request): RedirectResponse
     {
         if (! session()->has('google_id')) {
             return redirect('/login')->with('error', 'Sesi pendaftaran habis, silakan ulangi.');
@@ -64,7 +75,7 @@ class GoogleAuthController extends Controller
 
         try {
             $ocrText = (new TesseractOCR($imagePath))
-                ->executable(env('TESSERACT_PATH', '/usr/bin/tesseract'))
+                ->executable((string) config('services.tesseract.path', '/usr/bin/tesseract'))
                 ->lang('ind', 'eng')
                 ->run();
 
@@ -89,7 +100,7 @@ class GoogleAuthController extends Controller
                 'A' => '4',
                 'S' => '5',
                 'G' => '6',
-                'B' => '8'
+                'B' => '8',
             ]);
 
             $ocrAllNumbers = preg_replace('/[^0-9]/', '', $ocrTextFixed);
@@ -116,7 +127,7 @@ class GoogleAuthController extends Controller
 
             if ($bestMatchPercentage < 80) {
                 return back()->withErrors([
-                    'foto_ktp' => "Data NIK pada foto tidak cukup cocok dengan yang diketik (Akurasi sistem: " . round($bestMatchPercentage) . "%). Pastikan NIK benar dan foto KTP jelas."
+                    'foto_ktp' => 'Data NIK pada foto tidak cukup cocok dengan yang diketik (Akurasi sistem: '.round($bestMatchPercentage).'%). Pastikan NIK benar dan foto KTP jelas.',
                 ])->withInput();
             }
 

@@ -17,10 +17,12 @@ class UserProfileResource extends JsonResource
     public function toArray(Request $request): array
     {
         $user = $this->resource;
-        $name = is_object($user) && isset($user->name) ? (string) $user->name : 'Antoni Silha';
+        $name = is_object($user)
+            ? (string) ($user->nama_lengkap_ktp ?? $user->name ?? 'Pengguna')
+            : 'Pengguna';
 
         if ($user instanceof User) {
-            $initials = $user->initials();
+            $initials = (string) $user->initials;
         } else {
             $initials = Str::length($name) > 1
                 ? Str::upper(Str::substr($name, 0, 1).Str::substr(explode(' ', $name)[1] ?? $name, 0, 1))

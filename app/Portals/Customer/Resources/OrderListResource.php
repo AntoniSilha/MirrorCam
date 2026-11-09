@@ -2,7 +2,7 @@
 
 namespace App\Portals\Customer\Resources;
 
-use App\Modules\BookingAndOrdering\Models\TenantBooking;
+use App\Models\TenantBooking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

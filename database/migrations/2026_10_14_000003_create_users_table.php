@@ -1,10 +1,13 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
-    public function up(): void {
+return new class extends Migration
+{
+    public function up(): void
+    {
         Schema::create('users', function (Blueprint $table) {
             $table->id('id_akun');
             $table->string('id_user_google');
@@ -18,5 +21,9 @@ return new class extends Migration {
             $table->foreign('id_user_google')->references('id_user_google')->on('account_google')->onDelete('cascade');
         });
     }
-    public function down(): void { Schema::dropIfExists('users'); }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+    }
 };
