@@ -12,6 +12,7 @@
         </a>
     </div>
 
+
     <!-- Spacer for desktop alignment -->
     <div class="hidden md:block"></div>
 

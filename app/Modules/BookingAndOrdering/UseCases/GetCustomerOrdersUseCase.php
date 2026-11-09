@@ -2,8 +2,8 @@
 
 namespace App\Modules\BookingAndOrdering\UseCases;
 
+use App\Models\Booking;
 use App\Models\User;
-use App\Modules\BookingAndOrdering\Models\Booking;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
@@ -70,7 +70,7 @@ class GetCustomerOrdersUseCase
     {
         if (Schema::hasTable('bookings')) {
             $dbOrders = Booking::with('tenant')
-                ->where('user_id', $user->id)
+                ->where('user_id', $user->getKey())
                 ->get();
 
             if ($dbOrders->isNotEmpty()) {

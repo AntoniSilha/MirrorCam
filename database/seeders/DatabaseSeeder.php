@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AccountGoogle;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,14 +16,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $account = AccountGoogle::query()->updateOrCreate(
+            ['id_user_google' => 'seed-owner-mirrorcam'],
+            ['email' => 'antoni@mirrorcam.com']
+        );
 
-        User::firstOrCreate(
-            ['email' => 'antoni@mirrorcam.com'],
+        User::query()->updateOrCreate(
+            ['id_user_google' => $account->id_user_google],
             [
-                'name' => 'Antoni Silha',
-                'password' => 'Password123!',
-                'email_verified_at' => now(),
+                'role' => 'tenant',
+                'nama_lengkap_ktp' => 'Antoni Silha',
+                'nik_ktp' => '3171010101010000',
+                'no_whatsapp' => '081234567890',
+                'foto_ktp' => 'ktp/seed-owner.jpg',
             ]
         );
     }

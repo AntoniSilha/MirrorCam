@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'MirrorCam - Dashboard User')</title>
+    <title>{{ $title ?? 'MirrorCam - Dashboard User' }}</title>
 
     <!-- Google Font: Montserrat -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

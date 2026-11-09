@@ -37,13 +37,20 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
     ],
 
-    'google' => [
-        'client_id' => env('GOOGLE_CLIENT_ID'),
-        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI', '/customer/auth/google/callback'),
-    ],
+    'tesseract' => [
+    'path' => env('TESSERACT_PATH', '/usr/bin/tesseract'),
 
+    'tessdata_dir' => env(
+        'TESSERACT_TESSDATA_DIR',
+        null
+    ),
+
+    'nik_threshold' => (float) env(
+        'TESSERACT_NIK_THRESHOLD',
+        70
+    ),
+    ],
 ];
