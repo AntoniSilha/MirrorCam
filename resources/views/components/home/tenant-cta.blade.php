@@ -17,12 +17,11 @@
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full sm:w-auto">
             <!-- White Button: Daftarkan Tenant -->
             <a
-                href="{{ route('register') }}"
+                href="{{ route('register.mitra') }}"
                 class="px-5 py-2.5 bg-[#ffffff] hover:bg-[#e6e6e6] text-[#000000] text-center text-xs sm:text-sm font-bold rounded-[4px] shadow-xs transition"
             >
-                Daftarkan Tenant
+                Daftar Mitra
             </a>
-
             <!-- Outlined Button: Pelajari Keuntungan Bergabung -->
             <a
                 href="#cara-kerja"

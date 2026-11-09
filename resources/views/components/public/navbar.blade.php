@@ -37,12 +37,12 @@
                             </div>
                             <span class="text-xs font-semibold text-[#000000] hidden sm:inline truncate whitespace-nowrap">{{ auth()->user()->name }}</span>
                         </a>
-                        <form method="POST" action="{{ route('logout') }}" class="shrink-0">
-                            @csrf
-                            <button type="submit" class="text-xs font-medium text-gray-500 hover:text-[#000000] px-2 py-1 transition whitespace-nowrap">
-                                Keluar
-                            </button>
-                        </form>
+                        <form action="{{ route('logout') }}" method="POST" class="inline">
+    @csrf
+    <button type="submit" class="text-xs text-gray-600 hover:text-black font-semibold cursor-pointer">
+        Keluar
+    </button>
+</form>
                     </div>
                 @else
                     <!-- Guest -->

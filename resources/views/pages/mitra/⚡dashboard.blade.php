@@ -448,7 +448,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
                 <form method="POST" action="{{ route('logout') }}" class="shrink-0">
                     @csrf
-                    <button type="submit" title="Keluar" class="rounded-md p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-black">
+                    <button type="submit" title="" class="rounded-md p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-black">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
@@ -838,10 +838,12 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                 </div>
                                 <p class="mt-2 text-[10px] text-neutral-500">Sesi login saat ini tersinkronisasi secara real-time.</p>
                             </div>
-                            <form method="POST" action="{{ route('logout') }}" class="mt-4">
-                                @csrf
-                                <button type="submit" class="w-full rounded-md border border-neutral-300 bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-neutral-50">Keluar dari Perangkat Ini</button>
-                            </form>
+                            <form action="{{ route('logout') }}" method="POST" class="inline">
+    @csrf
+    <button type="submit" class="text-xs text-gray-600 hover:text-black font-semibold cursor-pointer">
+        Keluar
+    </button>
+</form>
                         </div>
                     </section>
                 @elseif ($section === 'komisi')

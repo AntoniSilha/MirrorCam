@@ -18,10 +18,16 @@ class GoogleRegistrationController extends Controller
 {
     public function redirect(): SymfonyRedirectResponse
     {
+        // 1. Bersihkan sisa sesi pendaftaran Google yang lama jika ada
+        session()->forget(['google_id', 'google_email', 'google_name']);
+
         /** @var AbstractProvider $driver */
         $driver = Socialite::driver('google');
 
-        return $driver->stateless()->redirect();
+        // 2. Tambahkan prompt select_account agar Google SELALU menampilkan layar pilih akun
+        return $driver->stateless()
+            ->with(['prompt' => 'select_account'])
+            ->redirect();
     }
 
     public function callback(): RedirectResponse

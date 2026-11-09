@@ -38,7 +38,7 @@ class CustomerOrderController extends Controller
         $counts = $result['counts'];
         $userProfile = (new UserProfileResource($user))->resolve();
 
-        return view('customer.orders.index', [
+        return view('customer.dashboard', [
             'orders' => $orders,
             'counts' => $counts,
             'activeFilter' => $filter,
