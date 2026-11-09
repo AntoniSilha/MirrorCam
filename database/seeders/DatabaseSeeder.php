@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\AccountGoogle;
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,20 +15,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $account = AccountGoogle::query()->updateOrCreate(
-            ['id_user_google' => 'seed-owner-mirrorcam'],
-            ['email' => 'antoni@mirrorcam.com']
-        );
+        // 1. Kategori Produk (Master Data Kategori)
+        $categoriesData = [
+            ['id_kategori' => 1, 'nama_kategori' => 'Kamera Cinema & Mirrorless'],
+            ['id_kategori' => 2, 'nama_kategori' => 'Lensa Prime & Cine'],
+            ['id_kategori' => 3, 'nama_kategori' => 'Lighting & Rigging'],
+            ['id_kategori' => 4, 'nama_kategori' => 'Audio & Monitor'],
+            ['id_kategori' => 5, 'nama_kategori' => 'Drone & Gimbal'],
+            ['id_kategori' => 6, 'nama_kategori' => 'Studio'],
+        ];
 
-        User::query()->updateOrCreate(
-            ['id_user_google' => $account->id_user_google],
-            [
-                'role' => 'tenant',
-                'nama_lengkap_ktp' => 'Antoni Silha',
-                'nik_ktp' => '3171010101010000',
-                'no_whatsapp' => '081234567890',
-                'foto_ktp' => 'ktp/seed-owner.jpg',
-            ]
-        );
+        foreach ($categoriesData as $cat) {
+            DB::table('kategori_produk')->updateOrInsert(
+                ['id_kategori' => $cat['id_kategori']],
+                ['nama_kategori' => $cat['nama_kategori'], 'created_at' => now(), 'updated_at' => now()]
+            );
+        }
     }
 }

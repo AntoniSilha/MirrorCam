@@ -4,7 +4,7 @@
     $userName = $user['nama_lengkap_ktp'] ?? auth()->user()?->name ?? 'Antoni Silha';
     $userRole = $user['role'] ?? 'User';
     $userAvatar = $user['avatar'] ?? auth()->user()?->avatar ?? null;
-    $userInitials = $user['initials'] ?? (method_exists(auth()->user(), 'initials') ? auth()->user()->initials() : 'AS');
+    $userInitials = $user['initials'] ?? (auth()->user() && method_exists(auth()->user(), 'initials') ? auth()->user()->initials() : 'AS');
     $isOrdersActive = request()->routeIs('dashboard');
 @endphp
 

@@ -21,7 +21,9 @@ class UserProfileResource extends JsonResource
             ? (string) ($user->nama_lengkap_ktp ?? $user->name ?? 'Pengguna')
             : 'Pengguna';
 
-        if ($user instanceof User) {
+        if ($user instanceof User && method_exists($user, 'initials')) {
+            $initials = $user->initials();
+        } elseif (is_object($user) && isset($user->initials)) {
             $initials = (string) $user->initials;
         } else {
             $initials = Str::length($name) > 1

@@ -20,15 +20,35 @@ class User extends Authenticatable
 
     protected $hidden = ['remember_token'];
 
-    public function getInitialsAttribute(): string
+    public function initials(): string
     {
         $name = $this->nama_lengkap_ktp ?? $this->name ?? 'User';
-        $words = explode(' ', trim($name));
+        $words = array_values(array_filter(explode(' ', trim($name))));
 
         if (count($words) >= 2) {
             return strtoupper(substr($words[0], 0, 1).substr($words[1], 0, 1));
         }
 
         return strtoupper(substr($name, 0, 2));
+    }
+
+    public function accountGoogle()
+    {
+        return $this->belongsTo(AccountGoogle::class, 'id_user_google', 'id_user_google');
+    }
+
+    public function getNameAttribute(): string
+    {
+        return $this->nama_lengkap_ktp ?? 'User';
+    }
+
+    public function getEmailAttribute(): ?string
+    {
+        return $this->attributes['email'] ?? $this->accountGoogle?->email ?? null;
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        return $this->initials();
     }
 }
