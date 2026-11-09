@@ -77,6 +77,7 @@ class GoogleRegistrationController extends Controller
             $ocrText = (new TesseractOCR($imagePath))
                 ->executable((string) config('services.tesseract.path', '/usr/bin/tesseract'))
                 ->lang('ind', 'eng')
+                ->psm(11)
                 ->run();
 
             if (empty(trim($ocrText))) {
@@ -89,25 +90,13 @@ class GoogleRegistrationController extends Controller
                 return back()->withErrors(['foto_ktp' => 'Teks standar KTP tidak terbaca. Pastikan foto KTP fisik jelas.'])->withInput();
             }
 
-            // Normalisasi Input User
             $inputNikBersih = preg_replace('/[^0-9]/', '', $request->nik_ktp);
-
-            // 1. Perbaiki kesalahan baca OCR yang umum (Tambahan D => 0, A => 4)
-            $ocrTextFixed = strtr($ocrText, [
-                'O' => '0', 'D' => '0',
-                'I' => '1', 'L' => '1',
-                'Z' => '2',
-                'A' => '4',
-                'S' => '5',
-                'G' => '6',
-                'B' => '8',
-            ]);
-
-            $ocrAllNumbers = preg_replace('/[^0-9]/', '', $ocrTextFixed);
 
             if (empty($inputNikBersih) || strlen($inputNikBersih) < 16) {
                 return back()->withErrors(['nik_ktp' => 'Format NIK yang Anda masukkan tidak valid (harus 16 angka).'])->withInput();
             }
+
+            $ocrAllNumbers = $this->scanNikDigits($imagePath);
 
             if (strlen($ocrAllNumbers) < 16) {
                 return back()->withErrors(['foto_ktp' => 'Angka pada KTP tidak terbaca jelas oleh sistem. Pastikan foto terang dan fokus.'])->withInput();
@@ -125,14 +114,18 @@ class GoogleRegistrationController extends Controller
                 }
             }
 
-            if ($bestMatchPercentage < 80) {
+            $nikThreshold = (float) config('services.tesseract.nik_threshold', 80);
+
+            if ($bestMatchPercentage < $nikThreshold) {
                 return back()->withErrors([
                     'foto_ktp' => 'Data NIK pada foto tidak cukup cocok dengan yang diketik (Akurasi sistem: '.round($bestMatchPercentage).'%). Pastikan NIK benar dan foto KTP jelas.',
                 ])->withInput();
             }
 
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal memindai gambar KTP. Pastikan file bukan gambar kosong atau buram.')->withInput();
+            report($e);
+
+            return back()->with('error', 'Sistem gagal memproses pemindaian KTP. Silakan coba lagi atau hubungi dukungan.')->withInput();
         }
 
         $fotoPath = $request->file('foto_ktp')->store('ktp', 'public');
@@ -151,5 +144,64 @@ class GoogleRegistrationController extends Controller
         Auth::login($user);
 
         return redirect('/dashboard')->with('success', 'Pendaftaran berhasil!');
+    }
+
+    private function scanNikDigits(string $imagePath): string
+    {
+        $ocrImagePath = $imagePath;
+        $image = null;
+        $temporaryImagePath = null;
+
+        try {
+            $imageInfo = getimagesize($imagePath);
+
+            if (extension_loaded('gd') && $imageInfo !== false && $imageInfo[0] * $imageInfo[1] <= 2_500_000) {
+                $imageData = file_get_contents($imagePath);
+                $image = $imageData === false ? false : imagecreatefromstring($imageData);
+
+                if ($image === false) {
+                    throw new \RuntimeException('Unable to decode the uploaded KTP image for OCR.');
+                }
+
+                $resizedImage = imagescale($image, imagesx($image) * 2, imagesy($image) * 2, IMG_BICUBIC);
+
+                if ($resizedImage === false) {
+                    throw new \RuntimeException('Unable to resize the uploaded KTP image for OCR.');
+                }
+
+                imagedestroy($image);
+                $image = $resizedImage;
+
+                imagefilter($image, IMG_FILTER_GRAYSCALE);
+                imagefilter($image, IMG_FILTER_CONTRAST, -20);
+
+                if (! imageconvolution($image, [[-1, -1, -1], [-1, 16, -1], [-1, -1, -1]], 8, 0)) {
+                    throw new \RuntimeException('Unable to sharpen the uploaded KTP image for OCR.');
+                }
+
+                $temporaryImagePath = tempnam(sys_get_temp_dir(), 'ktp-ocr-');
+
+                if ($temporaryImagePath === false || ! imagepng($image, $temporaryImagePath)) {
+                    throw new \RuntimeException('Unable to prepare the uploaded KTP image for OCR.');
+                }
+
+                $ocrImagePath = $temporaryImagePath;
+            }
+
+            return (new TesseractOCR($ocrImagePath))
+                ->executable((string) config('services.tesseract.path', '/usr/bin/tesseract'))
+                ->lang('ind', 'eng')
+                ->psm(11)
+                ->allowlist('0123456789')
+                ->run();
+        } finally {
+            if ($image instanceof \GdImage) {
+                imagedestroy($image);
+            }
+
+            if ($temporaryImagePath !== null && is_file($temporaryImagePath)) {
+                unlink($temporaryImagePath);
+            }
+        }
     }
 }
