@@ -75,7 +75,7 @@ class GetTenantDashboardMetricsUseCase
         );
 
         $activeProductIds = $activeBookings->pluck('id_produk')->unique();
-        $rentedUnits = (int) $products->whereIn('id_produk', $activeProductIds)->sum('total_stok_unit');
+        $rentedUnits = (int) $products->whereIn('id_produk', $activeProductIds)->sum('total_stock_unit');
 
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
@@ -99,7 +99,7 @@ class GetTenantDashboardMetricsUseCase
             'tenant' => $this->tenantPayload($tenant),
             'stats' => [
                 'total_produk' => $products->count(),
-                'total_stok' => (int) $products->sum('total_stok_unit'),
+                'total_stok' => (int) $products->sum('total_stock_unit'),
                 'penyewaan_berjalan' => $activeBookings->count(),
                 'pendapatan_tenant' => $netRevenue,
                 'pendapatan_kotor' => $grossRevenue,
@@ -116,8 +116,8 @@ class GetTenantDashboardMetricsUseCase
                 'nama' => $product->nama_produk,
                 'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
                 'harga' => (float) $product->harga_sewa,
-                'stok' => (int) $product->total_stok_unit,
-                'status' => $product->total_stok_unit > 0 ? 'Tersedia' : 'Stok Habis',
+                'stok' => (int) $product->total_stock_unit,
+                'status' => $product->total_stock_unit > 0 ? 'Tersedia' : 'Stok Habis',
             ])->values()->all(),
             'bookings' => $bookings->take(10)->map(fn (DetailPemesananTenant $booking) => [
                 'kode' => $booking->sub_order_eksternal ?: 'MC-'.str_pad((string) $booking->id_pemesanan, 4, '0', STR_PAD_LEFT),

@@ -19,6 +19,7 @@ class RegisterMitraRequest extends FormRequest
             'alamat_lengkap' => ['required', 'string'],
             'kota_operasional' => ['required', 'string', 'max:100'],
             'whatsapp_toko' => ['required', 'string', 'max:20'],
+            'hari_operasional' => ['required', 'string', 'max:100'],
             'jam_buka' => ['required', 'date_format:H:i'],
             'jam_tutup' => ['required', 'date_format:H:i'],
 

@@ -13,6 +13,7 @@ use Laravel\Socialite\Two\AbstractProvider;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse;
 use thiagoalessio\TesseractOCR\TesseractOCR;
+use thiagoalessio\TesseractOCR\TesseractOcrException;
 
 class GoogleRegistrationController extends Controller
 {
@@ -79,48 +80,53 @@ class GoogleRegistrationController extends Controller
 
         $imagePath = $request->file('foto_ktp')->getPathName();
 
-        try {
-            $ocrText = (new TesseractOCR($imagePath))
-                ->executable((string) config('services.tesseract.path', '/usr/bin/tesseract'))
-                ->lang('ind', 'eng')
-                ->psm(11)
-                ->run();
+        $inputNikBersih = (string) preg_replace('/[^0-9]/', '', (string) $request->nik_ktp);
 
-            if (empty(trim($ocrText))) {
+        if (empty($inputNikBersih) || strlen($inputNikBersih) < 16) {
+            return back()->withErrors(['nik_ktp' => 'Format NIK yang Anda masukkan tidak valid (harus 16 angka).'])->withInput();
+        }
+
+        try {
+            $nikLength = strlen($inputNikBersih);
+            $nikThreshold = (float) config('services.tesseract.nik_threshold', 80);
+
+            // Coba dulu gambar asli (cepat). Ini yang biasanya terbaca untuk
+            // foto yang justru rusak bila diproses (mis. KTP A).
+            $ocrResults = $this->scanKtp($imagePath, false, true);
+            $hasKtpMarker = $this->hasKtpMarker($ocrResults['text']);
+            $bestMatchPercentage = $this->bestNikMatch($inputNikBersih, $ocrResults['digits']);
+
+            // Jika belum lolos, coba varian hasil preprocessing (lebih lambat,
+            // tetapi menolong foto yang baru terbaca setelah dipertajam).
+            if (! $hasKtpMarker || $bestMatchPercentage < $nikThreshold) {
+                $processedResults = $this->scanKtp($imagePath, true, ! $hasKtpMarker);
+
+                $ocrResults['text'] .= ($ocrResults['text'] !== '' && $processedResults['text'] !== '' ? "\n" : '').$processedResults['text'];
+                $ocrResults['digits'] = array_merge($ocrResults['digits'], $processedResults['digits']);
+                $hasKtpMarker = $hasKtpMarker || $this->hasKtpMarker($processedResults['text']);
+                $bestMatchPercentage = max($bestMatchPercentage, $this->bestNikMatch($inputNikBersih, $processedResults['digits']));
+            }
+
+            if (trim($ocrResults['text']) === '') {
                 return back()->with('error', 'Tidak ada teks yang terbaca. Pastikan Anda mengunggah foto KTP asli yang jelas.')->withInput();
             }
 
-            $ocrText = strtoupper($ocrText);
-
-            if (! str_contains($ocrText, 'NIK') && ! str_contains($ocrText, 'PROVINSI')) {
+            if (! $hasKtpMarker) {
                 return back()->withErrors(['foto_ktp' => 'Teks standar KTP tidak terbaca. Pastikan foto KTP fisik jelas.'])->withInput();
             }
 
-            $inputNikBersih = preg_replace('/[^0-9]/', '', $request->nik_ktp);
+            $hasEnoughDigits = false;
 
-            if (empty($inputNikBersih) || strlen($inputNikBersih) < 16) {
-                return back()->withErrors(['nik_ktp' => 'Format NIK yang Anda masukkan tidak valid (harus 16 angka).'])->withInput();
-            }
-
-            $ocrAllNumbers = $this->scanNikDigits($imagePath);
-
-            if (strlen($ocrAllNumbers) < 16) {
-                return back()->withErrors(['foto_ktp' => 'Angka pada KTP tidak terbaca jelas oleh sistem. Pastikan foto terang dan fokus.'])->withInput();
-            }
-
-            $bestMatchPercentage = 0;
-            $nikLength = strlen($inputNikBersih);
-            $ocrLen = strlen($ocrAllNumbers);
-
-            for ($i = 0; $i <= $ocrLen - $nikLength; $i++) {
-                $substring = substr($ocrAllNumbers, $i, $nikLength);
-                similar_text($inputNikBersih, $substring, $percent);
-                if ($percent > $bestMatchPercentage) {
-                    $bestMatchPercentage = $percent;
+            foreach ($ocrResults['digits'] as $ocrDigits) {
+                if (strlen($ocrDigits) >= $nikLength) {
+                    $hasEnoughDigits = true;
+                    break;
                 }
             }
 
-            $nikThreshold = (float) config('services.tesseract.nik_threshold', 80);
+            if (! $hasEnoughDigits) {
+                return back()->withErrors(['foto_ktp' => 'Angka pada KTP tidak terbaca jelas oleh sistem. Pastikan foto terang dan fokus.'])->withInput();
+            }
 
             if ($bestMatchPercentage < $nikThreshold) {
                 return back()->withErrors([
@@ -138,7 +144,7 @@ class GoogleRegistrationController extends Controller
 
         $user = User::create([
             'id_user_google' => session('google_id'),
-            'role' => 'tenant',
+            'role' => 'user',
             'nama_lengkap_ktp' => $request->nama_lengkap_ktp,
             'nik_ktp' => $request->nik_ktp,
             'no_whatsapp' => $request->no_whatsapp,
@@ -152,62 +158,231 @@ class GoogleRegistrationController extends Controller
         return redirect('/dashboard')->with('success', 'Pendaftaran berhasil!');
     }
 
-    private function scanNikDigits(string $imagePath): string
+    /**
+     * Jalankan OCR pada beberapa varian gambar dan beberapa mode segmentasi,
+     * lalu gabungkan hasilnya. Pendekatan ini membuat satu foto yang gagal di
+     * satu varian tetap bisa terbaca lewat varian lain.
+     *
+     * @return array{text: string, digits: list<string>}
+     */
+    private function scanKtp(string $imagePath, bool $processedOnly, bool $withText): array
     {
-        $ocrImagePath = $imagePath;
-        $image = null;
-        $temporaryImagePath = null;
+        $temporaryImagePaths = [];
+        $texts = [];
+        $digits = [];
 
         try {
-            $imageInfo = getimagesize($imagePath);
+            $variantPaths = $this->buildOcrVariants($imagePath, $temporaryImagePaths, $processedOnly);
+            $pageSegmentationModes = $processedOnly ? [11] : [6, 11];
 
-            if (extension_loaded('gd') && $imageInfo !== false && $imageInfo[0] * $imageInfo[1] <= 2_500_000) {
-                $imageData = file_get_contents($imagePath);
-                $image = $imageData === false ? false : imagecreatefromstring($imageData);
+            foreach ($variantPaths as $variantPath) {
+                foreach ($pageSegmentationModes as $psm) {
+                    if ($withText) {
+                        $text = $this->runTesseract($variantPath, $psm, false);
 
-                if ($image === false) {
-                    throw new \RuntimeException('Unable to decode the uploaded KTP image for OCR.');
+                        if (trim($text) !== '') {
+                            $texts[] = $text;
+                        }
+                    }
+
+                    $digitText = (string) preg_replace('/[^0-9]/', '', $this->runTesseract($variantPath, $psm, true));
+
+                    if ($digitText !== '') {
+                        $digits[] = $digitText;
+                    }
                 }
-
-                $resizedImage = imagescale($image, imagesx($image) * 2, imagesy($image) * 2, IMG_BICUBIC);
-
-                if ($resizedImage === false) {
-                    throw new \RuntimeException('Unable to resize the uploaded KTP image for OCR.');
-                }
-
-                imagedestroy($image);
-                $image = $resizedImage;
-
-                imagefilter($image, IMG_FILTER_GRAYSCALE);
-                imagefilter($image, IMG_FILTER_CONTRAST, -20);
-
-                if (! imageconvolution($image, [[-1, -1, -1], [-1, 16, -1], [-1, -1, -1]], 8, 0)) {
-                    throw new \RuntimeException('Unable to sharpen the uploaded KTP image for OCR.');
-                }
-
-                $temporaryImagePath = tempnam(sys_get_temp_dir(), 'ktp-ocr-');
-
-                if ($temporaryImagePath === false || ! imagepng($image, $temporaryImagePath)) {
-                    throw new \RuntimeException('Unable to prepare the uploaded KTP image for OCR.');
-                }
-
-                $ocrImagePath = $temporaryImagePath;
             }
-
-            return (new TesseractOCR($ocrImagePath))
-                ->executable((string) config('services.tesseract.path', '/usr/bin/tesseract'))
-                ->lang('ind', 'eng')
-                ->psm(11)
-                ->allowlist('0123456789')
-                ->run();
         } finally {
-            if ($image instanceof \GdImage) {
-                imagedestroy($image);
+            foreach ($temporaryImagePaths as $temporaryImagePath) {
+                if (is_file($temporaryImagePath)) {
+                    unlink($temporaryImagePath);
+                }
+            }
+        }
+
+        return ['text' => implode("\n", $texts), 'digits' => $digits];
+    }
+
+    /**
+     * Hasilkan varian gambar untuk OCR. Jika $processedOnly false, hanya
+     * gambar asli yang dipakai. Jika true, gambar di-resize, di-grayscale,
+     * dan dipertajam untuk menolong foto yang kurang kontras.
+     *
+     * @param  list<string>  $temporaryImagePaths
+     * @return list<string>
+     */
+    private function buildOcrVariants(string $imagePath, array &$temporaryImagePaths, bool $processedOnly): array
+    {
+        $variantPaths = [];
+        $imageInfo = getimagesize($imagePath);
+
+        if (! extension_loaded('gd') || $imageInfo === false || $imageInfo[0] * $imageInfo[1] > 2_500_000) {
+            return $processedOnly ? $variantPaths : [$imagePath];
+        }
+
+        $imageData = file_get_contents($imagePath);
+        $sourceImage = $imageData === false ? false : imagecreatefromstring($imageData);
+
+        if ($sourceImage === false) {
+            return $processedOnly ? $variantPaths : [$imagePath];
+        }
+
+        try {
+            [$sourceImage, $rotated] = $this->applyExifOrientation($sourceImage, $imagePath);
+
+            if (! $processedOnly) {
+                if (! $rotated) {
+                    return [$imagePath];
+                }
+
+                $temporaryImagePath = $this->saveTemporaryImage($sourceImage);
+
+                if ($temporaryImagePath !== null) {
+                    $variantPaths[] = $temporaryImagePath;
+                    $temporaryImagePaths[] = $temporaryImagePath;
+                }
+
+                return $variantPaths;
             }
 
-            if ($temporaryImagePath !== null && is_file($temporaryImagePath)) {
-                unlink($temporaryImagePath);
+            $image = imagescale($sourceImage, imagesx($sourceImage) * 2, imagesy($sourceImage) * 2, IMG_BICUBIC);
+
+            if ($image === false) {
+                return $variantPaths;
             }
+
+            imagefilter($image, IMG_FILTER_GRAYSCALE);
+            imagefilter($image, IMG_FILTER_CONTRAST, -20);
+            imageconvolution($image, [[-1, -1, -1], [-1, 16, -1], [-1, -1, -1]], 8, 0);
+
+            $temporaryImagePath = $this->saveTemporaryImage($image);
+
+            if ($temporaryImagePath !== null) {
+                $variantPaths[] = $temporaryImagePath;
+                $temporaryImagePaths[] = $temporaryImagePath;
+            }
+
+            imagedestroy($image);
+        } finally {
+            imagedestroy($sourceImage);
+        }
+
+        return $variantPaths;
+    }
+
+    /**
+     * Putar gambar sesuai tag EXIF Orientation. Foto dari WhatsApp sering
+     * tersimpan miring sehingga Tesseract membaca teksnya secara acak.
+     *
+     * @return array{0: \GdImage, 1: bool}
+     */
+    private function applyExifOrientation(\GdImage $image, string $imagePath): array
+    {
+        $orientation = 1;
+
+        if (function_exists('exif_read_data')) {
+            $exif = @exif_read_data($imagePath);
+            $orientation = (int) ($exif['Orientation'] ?? 1);
+        }
+
+        $angle = match ($orientation) {
+            3 => 180,
+            6 => -90,
+            8 => 90,
+            default => 0,
+        };
+
+        if ($angle === 0) {
+            return [$image, false];
+        }
+
+        $rotatedImage = imagerotate($image, $angle, 0);
+
+        if ($rotatedImage === false) {
+            return [$image, false];
+        }
+
+        imagedestroy($image);
+
+        return [$rotatedImage, true];
+    }
+
+    private function saveTemporaryImage(\GdImage $image): ?string
+    {
+        $temporaryImagePath = tempnam(sys_get_temp_dir(), 'ktp-ocr-');
+
+        if ($temporaryImagePath === false) {
+            return null;
+        }
+
+        if (imagepng($image, $temporaryImagePath)) {
+            return $temporaryImagePath;
+        }
+
+        if (is_file($temporaryImagePath)) {
+            unlink($temporaryImagePath);
+        }
+
+        return null;
+    }
+
+    private function hasKtpMarker(string $text): bool
+    {
+        $normalized = strtr(strtoupper($text), ['!' => 'I', '|' => 'I']);
+
+        foreach (['NIK', 'PROVINSI', 'KABUPATEN', 'PENDUDUK'] as $marker) {
+            if (str_contains($normalized, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<string>  $candidates
+     */
+    private function bestNikMatch(string $nik, array $candidates): float
+    {
+        $nikLength = strlen($nik);
+        $bestMatchPercentage = 0.0;
+
+        foreach ($candidates as $ocrDigits) {
+            $ocrLength = strlen($ocrDigits);
+
+            for ($i = 0; $i <= $ocrLength - $nikLength; $i++) {
+                similar_text($nik, substr($ocrDigits, $i, $nikLength), $percent);
+
+                if ($percent > $bestMatchPercentage) {
+                    $bestMatchPercentage = $percent;
+                }
+            }
+        }
+
+        return $bestMatchPercentage;
+    }
+
+    private function runTesseract(string $imagePath, int $psm, bool $digitsOnly): string
+    {
+        $ocr = (new TesseractOCR($imagePath))
+            ->executable((string) config('services.tesseract.path', '/usr/bin/tesseract'))
+            ->lang('ind', 'eng')
+            ->psm($psm);
+
+        $tessdataDir = config('services.tesseract.tessdata_dir');
+
+        if (is_string($tessdataDir) && $tessdataDir !== '') {
+            $ocr->tessdataDir($tessdataDir);
+        }
+
+        if ($digitsOnly) {
+            $ocr->allowlist('0123456789');
+        }
+
+        try {
+            return $ocr->run();
+        } catch (TesseractOcrException $exception) {
+            return '';
         }
     }
 }

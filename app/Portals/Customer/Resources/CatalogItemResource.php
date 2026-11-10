@@ -57,8 +57,8 @@ class CatalogItemResource extends JsonResource
             : (int) ($this->resource['review_count'] ?? $this->resource['reviews'] ?? 0);
 
         $stock = $isModel
-            ? (int) ($this->resource->total_stok_unit ?? 0)
-            : (int) ($this->resource['total_stok_unit'] ?? $this->resource['stock'] ?? 0);
+            ? (int) ($this->resource->total_stock_unit ?? 0)
+            : (int) ($this->resource['total_stock_unit'] ?? $this->resource['stock'] ?? 0);
 
         $isAvailable = $stock > 0;
 

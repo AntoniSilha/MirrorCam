@@ -23,6 +23,7 @@ return new class extends Migration
             $table->integer('durasi_sewa_hari');
             $table->decimal('harga_sewa_booking', 12, 2);
             $table->decimal('total_harga', 12, 2);
+            $table->string('status_harga')->nullable();
             $table->string('status_sewa');
             $table->timestamps();
 

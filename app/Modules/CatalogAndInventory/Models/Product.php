@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $color_produk
  * @property string $deskripsi_lengkap
  * @property float $harga_sewa
- * @property int $total_stok_unit
+ * @property int $total_stock_unit
  * @property string|null $thumbnail_url
  * @property float|null $rating
  * @property int|null $review_count
@@ -37,7 +37,7 @@ class Product extends Model
         'color_produk',
         'deskripsi_lengkap',
         'harga_sewa',
-        'total_stok_unit',
+        'total_stock_unit',
         'thumbnail_url',
         'rating',
         'review_count',
@@ -45,7 +45,7 @@ class Product extends Model
 
     protected $casts = [
         'harga_sewa' => 'decimal:2',
-        'total_stok_unit' => 'integer',
+        'total_stock_unit' => 'integer',
         'rating' => 'float',
         'review_count' => 'integer',
     ];
@@ -88,7 +88,7 @@ class Product extends Model
      */
     public function scopeAvailable(Builder $query): Builder
     {
-        return $query->where('total_stok_unit', '>', 0);
+        return $query->where('total_stock_unit', '>', 0);
     }
 
     /**

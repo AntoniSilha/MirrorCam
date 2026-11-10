@@ -1,8 +1,7 @@
 <?php
 
-use App\Portals\Customer\Controllers\CustomerOrderController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('customer')->name('customer.')->group(function () {
-    Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
+Route::middleware(['auth', 'role.user'])->prefix('customer')->name('customer.')->group(function () {
+    Route::livewire('/orders', 'pages::customer.dashboard')->name('orders.index');
 });

@@ -78,7 +78,7 @@
                 <h3 class="text-sm font-bold text-[#000000]">Belum ada mitra tenant resmi terdaftar</h3>
                 <p class="text-xs text-gray-500 mt-1">Mitra penyewaan kamera dan gear yang terdaftar akan ditampilkan di sini.</p>
                 @auth
-                    @if (Auth::user()->role === 'tenant')
+                    @if (Auth::user()->role === 'mitra')
                         <div class="mt-4">
                             <a href="{{ route('mitra.dashboard') }}" class="inline-block px-4 py-2 bg-[#000000] text-white text-xs font-bold rounded-[4px]">
                                 Kelola Toko di Dashboard Mitra

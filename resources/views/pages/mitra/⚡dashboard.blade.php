@@ -29,7 +29,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
     public string $harga_sewa = '';
 
-    public string $total_stok_unit = '1';
+    public string $total_stock_unit = '1';
 
     public string $deskripsi_lengkap = '';
 
@@ -168,7 +168,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $this->nama_produk = '';
         $this->id_kategori = '';
         $this->harga_sewa = '';
-        $this->total_stok_unit = '1';
+        $this->total_stock_unit = '1';
         $this->deskripsi_lengkap = '';
         $this->showProductModal = true;
     }
@@ -196,7 +196,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
             'nama_produk' => ['required', 'string', 'max:120'],
             'id_kategori' => ['required', 'exists:kategori_produk,id_kategori'],
             'harga_sewa' => ['required', 'numeric', 'min:0'],
-            'total_stok_unit' => ['required', 'integer', 'min:0'],
+            'total_stock_unit' => ['required', 'integer', 'min:0'],
             'deskripsi_lengkap' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -206,7 +206,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
             'nama_produk' => $validated['nama_produk'],
             'deskripsi_lengkap' => $validated['deskripsi_lengkap'] ?: '-',
             'harga_sewa' => $validated['harga_sewa'],
-            'total_stok_unit' => (int) $validated['total_stok_unit'],
+            'total_stock_unit' => (int) $validated['total_stock_unit'],
         ]);
 
         unset($this->dashboard, $this->chart);
@@ -216,7 +216,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $this->nama_produk = '';
         $this->id_kategori = '';
         $this->harga_sewa = '';
-        $this->total_stok_unit = '1';
+        $this->total_stock_unit = '1';
         $this->deskripsi_lengkap = '';
 
         session()->flash('status', 'Produk baru berhasil ditambahkan.');
@@ -946,8 +946,8 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
                     <div>
                         <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Total Stok Unit</label>
-                        <input type="number" min="0" wire:model="total_stok_unit" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">
-                        @error('total_stok_unit') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        <input type="number" min="0" wire:model="total_stock_unit" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">
+                        @error('total_stock_unit') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                     </div>
 
                     <div>

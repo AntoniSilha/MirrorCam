@@ -15,7 +15,7 @@ return new class extends Migration {
                     $table->string('id_user_google')->nullable();
                 }
                 if (! Schema::hasColumn('users', 'role')) {
-                    $table->string('role')->default('customer');
+                    $table->enum('role', ['user', 'mitra', 'superadmin'])->default('user');
                 }
                 if (! Schema::hasColumn('users', 'nama_lengkap_ktp')) {
                     $table->string('nama_lengkap_ktp')->nullable();
@@ -34,7 +34,7 @@ return new class extends Migration {
             Schema::create('users', function (Blueprint $table) {
                 $table->id('id_akun');
                 $table->string('id_user_google')->nullable();
-                $table->string('role')->default('customer');
+                $table->enum('role', ['user', 'mitra', 'superadmin'])->default('user');
                 $table->string('nama_lengkap_ktp')->nullable();
                 $table->string('nik_ktp')->nullable();
                 $table->string('no_whatsapp')->nullable();

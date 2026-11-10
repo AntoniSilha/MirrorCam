@@ -28,7 +28,7 @@ class UserFactory extends Factory
 
         return [
             'id_user_google' => $googleId,
-            'role' => 'customer',
+            'role' => 'user',
             'nama_lengkap_ktp' => fake()->name(),
             'nik_ktp' => fake()->numerify('################'),
             'no_whatsapp' => fake()->numerify('08##########'),
