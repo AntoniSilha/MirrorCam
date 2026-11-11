@@ -37,6 +37,11 @@ class User extends Authenticatable
         return $this->belongsTo(AccountGoogle::class, 'id_user_google', 'id_user_google');
     }
 
+    public function pengaduan()
+    {
+        return $this->hasMany(PengaduanPelanggan::class, 'id_akun', 'id_akun');
+    }
+
     public function getNameAttribute(): string
     {
         return $this->nama_lengkap_ktp ?? 'User';
