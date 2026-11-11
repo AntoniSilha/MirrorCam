@@ -16,10 +16,6 @@
                     Platform Sewa Kamera, Aksesoris, & Studio Lintas Tenant No. 1 di Indonesia. Nikmati kemudahan eksplorasi peralatan multimedia berkualitas dengan sistem keamanan terpadu dan terpercaya.
                 </p>
                 <div class="flex items-center gap-3 pt-2 text-gray-500 text-xs">
-                    <span class="inline-flex items-center gap-1 font-semibold text-[#16a34a]">
-                        <span class="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse"></span>
-                        Platform Online & Siap Sewa
-                    </span>
                 </div>
             </div>
 

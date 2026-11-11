@@ -2,9 +2,9 @@
 
 <header class="sticky top-0 z-50 bg-[#ffffff] border-b border-[#e5e5e5] shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16 gap-4">
-            <!-- Brand Logo & Desktop Nav Links -->
-            <div class="flex items-center gap-6 lg:gap-8 min-w-0">
+        <div class="relative flex items-center justify-between h-16 gap-4">
+            <!-- Brand Logo -->
+            <div class="flex items-center min-w-0">
                 <a href="{{ route('home') }}" class="flex items-center gap-2 group shrink-0">
                     <div class="w-8 h-8 bg-[#000000] text-white rounded-[4px] flex items-center justify-center shadow-xs transition group-hover:scale-105">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -14,28 +14,25 @@
                     </div>
                     <span class="text-base sm:text-lg font-extrabold tracking-tight text-[#000000] whitespace-nowrap">MIRRORCAM</span>
                 </a>
-
-                <!-- Nav Menu Links (Desktop) -->
-                <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-xs lg:text-sm font-semibold text-[#000000]/80">
-                    <a href="#kategori" class="whitespace-nowrap hover:text-[#000000] transition">Kategori</a>
-                    <a href="#mitra-tenant" class="whitespace-nowrap hover:text-[#000000] transition">Mitra Tenant</a>
-                    <a href="#katalog" class="whitespace-nowrap hover:text-[#000000] transition">Rekomendasi Gear</a>
-                    <a href="#cara-kerja" class="whitespace-nowrap hover:text-[#000000] transition">Cara Sewa</a>
-                    <a href="#keamanan" class="whitespace-nowrap hover:text-[#000000] transition">Keamanan</a>
-                    <a href="#faq" class="whitespace-nowrap hover:text-[#000000] transition">FAQ</a>
-                </nav>
             </div>
+
+            <!-- Nav Menu Links (Desktop, centered) -->
+            <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-xs lg:text-sm font-semibold text-[#000000]/80 absolute left-1/2 -translate-x-1/2">
+                <a href="{{ route ('home') }}" class="whitespace-nowrap px-3 py-2 rounded-[4px] transition-all duration-500 ease-out hover:bg-[#000000] hover:text-white">Beranda</a>
+                <a href="#mitra-tenant" class="whitespace-nowrap px-3 py-2 rounded-[4px] transition-all duration-500 ease-out hover:bg-[#000000] hover:text-white">Tenant</a>
+                <a href="#" class="whitespace-nowrap px-3 py-2 rounded-[4px] transition-all duration-500 ease-out hover:bg-[#000000] hover:text-white">Pengaduan</a>
+            </nav>
 
             <!-- Header Actions / Auth (Right side) -->
             <div class="flex items-center gap-2 sm:gap-3 shrink-0">
                 @auth
                     <!-- User is logged in -->
                     <div class="flex items-center gap-2 sm:gap-3">
-                        <a href="{{ route('dashboard') }}" class="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-[4px] hover:bg-[#f9f9f9] border border-transparent hover:border-[#e5e5e5] transition max-w-[200px] sm:max-w-xs">
+                        <a href="{{ route('dashboard') }}" class="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-[4px] hover:bg-[#f9f9f9] border border-transparent hover:border-[#e5e5e5] transition min-w-0 max-w-[200px] sm:max-w-xs">
                             <div class="w-7 h-7 rounded-full bg-[#000000] text-white flex items-center justify-center text-xs font-bold shrink-0">
                                 {{ auth()->user() && method_exists(auth()->user(), 'initials') ? auth()->user()->initials() : (auth()->user()->initials ?? 'US') }}
                             </div>
-                            <span class="text-xs font-semibold text-[#000000] hidden sm:inline truncate whitespace-nowrap">{{ auth()->user()->name }}</span>
+                            <span class="text-xs font-semibold text-[#000000] hidden sm:block min-w-0 max-w-[120px] sm:max-w-[180px] truncate whitespace-nowrap">{{ auth()->user()->name }}</span>
                         </a>
                         <form action="{{ route('logout') }}" method="POST" class="inline">
     @csrf
@@ -52,16 +49,8 @@
                                 href="{{ route('login') }}"
                                 class="px-3.5 py-1.5 text-xs font-semibold text-[#000000] bg-[#d9d9d9] hover:bg-[#cccccc] rounded-[4px] transition whitespace-nowrap"
                             >
-                                Masuk
+                                Login
                             </a>
-                            @if (Route::has('register'))
-                                <a
-                                    href="{{ route('register') }}"
-                                    class="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#000000] hover:bg-[#222222] rounded-[4px] shadow-xs transition whitespace-nowrap"
-                                >
-                                    Daftar
-                                </a>
-                            @endif
                         </div>
                     @endif
                 @endauth
