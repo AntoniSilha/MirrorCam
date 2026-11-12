@@ -14,6 +14,7 @@ Route::get('/login', [GoogleRegistrationController::class, 'redirect'])->name('l
 
 Route::middleware(['auth', 'role.user'])->group(function () {
     Route::livewire('/dashboard', 'pages::customer.dashboard')->name('dashboard');
+    Route::resource('pengaduan', \App\Http\Controllers\PengaduanPelangganController::class)->only(['index', 'create', 'store', 'show']);
 });
 
 Route::get('/auth/google/redirect', [GoogleRegistrationController::class, 'redirect'])->name('google.redirect');
@@ -38,3 +39,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/register-mitra', [MitraRegisterController::class, 'create'])->name('register.mitra');
     Route::post('/register-mitra', [MitraRegisterController::class, 'store'])->name('register.mitra.store');
 });
+
+if (app()->environment('local')) {
+    Route::get('/dev-login', function () {
+        $user = \App\Models\User::first();
+        if ($user) {
+            \Illuminate\Support\Facades\Auth::login($user);
+            return redirect()->route('pengaduan.index')->with('status', 'Berhasil login sebagai ' . $user->name . ' untuk testing.');
+        }
+        return 'Tidak ada akun user di database.';
+    })->name('dev.login');
+}

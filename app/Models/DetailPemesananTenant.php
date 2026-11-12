@@ -36,6 +36,11 @@ class DetailPemesananTenant extends Model
         return $this->belongsTo(VerifikasiKtp::class, 'id_ktp', 'id_ktp');
     }
 
+    public function pengaduan()
+    {
+        return $this->hasMany(PengaduanPelanggan::class, 'id_pemesanan', 'id_pemesanan');
+    }
+
     public function getProductNameAttribute(): string
     {
         return $this->produk?->nama_produk ?? 'Kamera & Lensa MirrorCam';
