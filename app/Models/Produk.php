@@ -42,4 +42,14 @@ class Produk extends Model
 
         return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80';
     }
+
+    public function getTotalStokUnitAttribute(): int
+    {
+        return (int) ($this->attributes['total_stok_unit'] ?? $this->attributes['total_stock_unit'] ?? 0);
+    }
+
+    public function getTotalStockUnitAttribute(): int
+    {
+        return (int) ($this->attributes['total_stock_unit'] ?? $this->attributes['total_stok_unit'] ?? 0);
+    }
 }
