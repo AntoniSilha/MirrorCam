@@ -16,10 +16,10 @@ uses(RefreshDatabase::class);
 
 function createTestCustomer(string $name = 'Budi Santoso'): User
 {
-    $googleId = 'google-' . uniqid();
+    $googleId = 'google-'.uniqid();
     AccountGoogle::create([
         'id_user_google' => $googleId,
-        'email' => strtolower(str_replace(' ', '.', $name)) . '-' . uniqid() . '@example.com',
+        'email' => strtolower(str_replace(' ', '.', $name)).'-'.uniqid().'@example.com',
     ]);
 
     $user = User::create([
@@ -43,7 +43,7 @@ function createTestCustomer(string $name = 'Budi Santoso'): User
 
 function createTestTenant(string $shopName = 'Indo Project'): Tenant
 {
-    $owner = createTestCustomer('Owner ' . $shopName);
+    $owner = createTestCustomer('Owner '.$shopName);
     $owner->update(['role' => 'mitra']);
 
     return Tenant::create([
@@ -71,7 +71,7 @@ function createTestBooking(User $customer, Tenant $tenant, string $productName =
         'id_tenant' => $tenant->id_tenant,
         'id_kategori' => $category->id_kategori,
         'nama_produk' => $productName,
-        'deskripsi_lengkap' => 'Deskripsi ' . $productName,
+        'deskripsi_lengkap' => 'Deskripsi '.$productName,
         'harga_sewa' => 550000,
         'total_stock_unit' => 2,
     ]);
@@ -79,7 +79,7 @@ function createTestBooking(User $customer, Tenant $tenant, string $productName =
     $ktp = VerifikasiKtp::where('id_akun', $customer->id_akun)->first();
 
     return DetailPemesananTenant::create([
-        'sub_order_eksternal' => 'INV-2026-MC' . random_int(100, 999),
+        'sub_order_eksternal' => 'INV-2026-MC'.random_int(100, 999),
         'id_tenant' => $tenant->id_tenant,
         'id_produk' => $product->id_produk,
         'id_ktp' => $ktp->id_ktp,
@@ -104,18 +104,15 @@ test('customer can access pengaduan page and sees empty state when no complaints
     $response = $this->actingAs($customer)->get(route('pengaduan.index'));
 
     $response->assertOk();
-    $response->assertSee('Pusat Pengaduan & Klaim Sengketa Rental', false);
-    $response->assertSee('Sistem Mediasi Online Aktif');
-    $response->assertSee('Total Laporan Anda');
-    $response->assertSee('Kasus Aktif');
-    $response->assertSee('Kasus Selesai');
-    $response->assertSee('Perlu Tindakan Segera');
-    $response->assertSee('Belum Ada Riwayat Pengaduan');
-    $response->assertSee('Ajukan Pengaduan Rental');
-    $response->assertSee('SOP & Regulasi Sengketa', false);
+    $response->assertSee('Formulir Laporan & Pengaduan Pelanggaran');
+    $response->assertSee('Laporan Rahasia & Terenkripsi');
+    $response->assertSee('Nomor Booking / Kode Invoice');
+    $response->assertSee('Kategori Dugaan Pelanggaran');
+    $response->assertSee('Kirim Laporan');
+    $response->assertDontSee('Riwayat Pengaduan Anda');
 });
 
-test('customer sees dynamic complaints with correct styling badges and details', function () {
+test('customer can see complaint details on the complaint detail page', function () {
     $customer = createTestCustomer('Lucky User');
     $tenant = createTestTenant('Indo Project');
     $booking = createTestBooking($customer, $tenant, 'Sony FX30 Cinema Line Full-Frame + FE 24-70mm f/2.8 GM II');
@@ -135,7 +132,7 @@ test('customer sees dynamic complaints with correct styling badges and details',
         'pesan_peringatan' => 'Tenggat Waktu Tanggapan Tenant: 03 Jam 45 Menit (Sesuai SLA QC Digital)',
     ]);
 
-    $response = $this->actingAs($customer)->get(route('pengaduan.index'));
+    $response = $this->actingAs($customer)->get(route('pengaduan.show', $complaint->nomor_tiket));
 
     $response->assertOk();
     $response->assertSee('Tiket #AMC-2026-0891');
@@ -143,10 +140,7 @@ test('customer sees dynamic complaints with correct styling badges and details',
     $response->assertSee('Sony FX30 Cinema Line Full-Frame + FE 24-70mm f/2.8 GM II');
     $response->assertSee('Sensor Kotor & Malfungsi Optik');
     $response->assertSee('Terdapat noda oil spot pada sensor');
-    $response->assertSee('Escrow: Rp 1.500.000 Ditahan');
-    $response->assertSee('Lihat Detail Kasus');
-    $response->assertSee('Kirim Pesan Mediator');
-    $response->assertDontSee('Belum Ada Riwayat Pengaduan');
+    $response->assertSee('Rp 1.500.000');
 });
 
 test('complaint query strictly isolates data per authenticated customer', function () {
@@ -179,17 +173,25 @@ test('complaint query strictly isolates data per authenticated customer', functi
         'status_kasus' => 'Aktif',
     ]);
 
-    // When Customer 1 logs in, they only see ticket AMC-2026-0001
-    $response1 = $this->actingAs($customer1)->get(route('pengaduan.index'));
-    $response1->assertSee('AMC-2026-0001');
-    $response1->assertDontSee('AMC-2026-0002');
+    // Each customer can only open their own complaint detail
+    $response1 = $this->actingAs($customer1)->get(route('pengaduan.show', 'AMC-2026-0001'));
+    $response1->assertOk();
+    $response1->assertSee('Keluhan rahasia dari Customer Satu');
     $response1->assertDontSee('Keluhan rahasia dari Customer Dua');
 
-    // When Customer 2 logs in, they only see ticket AMC-2026-0002
-    $response2 = $this->actingAs($customer2)->get(route('pengaduan.index'));
-    $response2->assertSee('AMC-2026-0002');
-    $response2->assertDontSee('AMC-2026-0001');
+    $response2 = $this->actingAs($customer2)->get(route('pengaduan.show', 'AMC-2026-0002'));
+    $response2->assertOk();
+    $response2->assertSee('Keluhan rahasia dari Customer Dua');
     $response2->assertDontSee('Keluhan rahasia dari Customer Satu');
+
+    // Complaints belonging to another customer must not be accessible
+    $this->actingAs($customer1)
+        ->get(route('pengaduan.show', 'AMC-2026-0002'))
+        ->assertNotFound();
+
+    $this->actingAs($customer2)
+        ->get(route('pengaduan.show', 'AMC-2026-0001'))
+        ->assertNotFound();
 });
 
 test('customer can submit a new complaint with file upload', function () {

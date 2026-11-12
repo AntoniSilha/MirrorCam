@@ -25,7 +25,7 @@
                         <span class="absolute bottom-0 left-0 w-full h-[2px] bg-[#000000]"></span>
                     @endif
                 </a>
-                <a href="{{ route('home') }}#mitra-tenant" class="relative py-2 whitespace-nowrap text-gray-600 transition hover:text-black">
+                <a href="#" class="relative py-2 whitespace-nowrap text-gray-600 transition hover:text-black">
                     Tenant
                 </a>
                 <a href="{{ route('pengaduan.index') }}" class="relative py-2 whitespace-nowrap transition hover:text-black {{ request()->routeIs('pengaduan.*') ? 'font-bold text-[#000000]' : 'text-gray-600' }}">
@@ -55,7 +55,7 @@
                             </div>
                             <div class="hidden sm:flex flex-col text-left leading-tight">
                                 <span class="text-xs font-bold text-[#000000] max-w-[120px] truncate">{{ auth()->user()->name }}</span>
-                                <span class="text-[10px] text-gray-500">User</span>
+                                <span class="text-[10px] text-gray-500">{{ auth()->user()->role_label }}</span>
                             </div>
                             <svg class="w-3.5 h-3.5 text-gray-500 ml-1 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
