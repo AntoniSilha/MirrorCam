@@ -3,43 +3,42 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Produk extends Model
 {
     protected $table = 'produks';
-
     protected $primaryKey = 'id_produk';
+    protected $guarded = ['id_produk'];
 
-    protected $guarded = [];
+    protected $appends = ['primary_image'];
 
-    public function tenant(): BelongsTo
+    public function tenant()
     {
         return $this->belongsTo(Tenant::class, 'id_tenant', 'id_tenant');
     }
 
-    public function kategori(): BelongsTo
+    public function kategori()
     {
         return $this->belongsTo(KategoriProduk::class, 'id_kategori', 'id_kategori');
     }
 
-    public function galeri(): HasMany
+    public function galeri()
     {
         return $this->hasMany(GaleriFotoProduk::class, 'id_produk', 'id_produk');
     }
 
     public function getPrimaryImageAttribute(): string
     {
-        if ($this->relationLoaded('galeri') && $this->galeri->isNotEmpty()) {
-            return $this->galeri->first()->url_foto_produk;
+        $foto = $this->galeri->first()?->url_foto_produk;
+
+        if (!$foto) {
+            return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80';
         }
 
-        $firstPhoto = $this->galeri()->first();
-        if ($firstPhoto) {
-            return $firstPhoto->url_foto_produk;
+        if (str_starts_with($foto, 'http://') || str_starts_with($foto, 'https://')) {
+            return $foto;
         }
 
-        return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80';
+        return asset('storage/' . ltrim($foto, '/'));
     }
 }
