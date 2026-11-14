@@ -8,6 +8,10 @@ use App\Models\KomisiPlatform;
 use App\Models\Produk;
 use App\Models\Tenant;
 use App\Models\User;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -17,7 +21,7 @@ class GetTenantDashboardMetricsUseCase
     /**
      * @return array<string, mixed>
      */
-    public function execute(User $user): array
+    public function execute(User $user, string $productSearch = '', string $bookingSearch = ''): array
     {
         $tenant = Tenant::query()
             ->where('id_akun_pemilik', $user->id_akun)
@@ -27,13 +31,13 @@ class GetTenantDashboardMetricsUseCase
             return $this->emptyData($user);
         }
 
-        return $this->databaseData($tenant);
+        return $this->databaseData($tenant, $productSearch, $bookingSearch);
     }
 
     /**
      * @return array<string, mixed>
      */
-    protected function databaseData(Tenant $tenant): array
+    protected function databaseData(Tenant $tenant, string $productSearch = '', string $bookingSearch = ''): array
     {
         $products = Produk::query()
             ->where('id_tenant', $tenant->id_tenant)
@@ -94,6 +98,62 @@ class GetTenantDashboardMetricsUseCase
 
         [$chartLabels, $chartValues] = $this->chartData($bookings, $netByBooking);
 
+        $productRows = $products->map(fn (Produk $product) => [
+            'nama' => $product->nama_produk,
+            'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
+            'harga' => (float) $product->harga_sewa,
+            'stok' => (int) $product->total_stock_unit,
+            'status' => $product->total_stock_unit > 0 ? 'Tersedia' : 'Stok Habis',
+        ])->values();
+
+        $bookingRows = $bookings->map(fn (DetailPemesananTenant $booking) => [
+            'kode' => $booking->sub_order_eksternal ?: 'MC-'.str_pad((string) $booking->id_pemesanan, 4, '0', STR_PAD_LEFT),
+            'produk' => $productsById->get($booking->id_produk) ? $productsById->get($booking->id_produk)->nama_produk : 'Produk',
+            'penyewa' => '-',
+            'mulai' => $this->formatDate($booking->waktu_ambil_booking),
+            'selesai' => $this->formatDate($booking->waktu_kembali_booking),
+            'status' => $booking->status_sewa ?: 'Booking Aktif',
+            'total' => (float) $booking->total_harga,
+        ])->values();
+
+        $commissionRows = $commissions->map(function (KomisiPlatform $commission) use ($bookings) {
+            $booking = $bookings->firstWhere('id_pemesanan', $commission->id_pemesanan);
+
+            return [
+                'kode' => 'KOM-'.str_pad((string) $commission->id_komisi, 4, '0', STR_PAD_LEFT),
+                'tanggal' => $this->formatDate($commission->created_at),
+                'persen' => (float) $commission->persentase_komisi_platform,
+                'komisi' => (float) $commission->total_komisi,
+                'pendapatan' => $booking ? (float) $booking->total_harga : 0.0,
+            ];
+        })->values();
+
+        $productTerm = Str::lower(trim($productSearch));
+
+        if ($productTerm !== '') {
+            $productRows = $productRows->filter(fn (array $row) => Str::contains(
+                Str::lower($row['nama'].' '.$row['kategori'].' '.$row['status']),
+                $productTerm
+            ))->values();
+        }
+
+        $bookingTerm = Str::lower(trim($bookingSearch));
+
+        if ($bookingTerm !== '') {
+            $bookingRows = $bookingRows->filter(fn (array $row) => Str::contains(
+                Str::lower(implode(' ', [
+                    $row['kode'],
+                    $row['produk'],
+                    $row['penyewa'],
+                    $row['mulai'],
+                    $row['selesai'],
+                    $row['status'],
+                    (string) $row['total'],
+                ])),
+                $bookingTerm
+            ))->values();
+        }
+
         return [
             'has_tenant' => true,
             'tenant' => $this->tenantPayload($tenant),
@@ -112,34 +172,73 @@ class GetTenantDashboardMetricsUseCase
                 'labels' => $chartLabels,
                 'values' => $chartValues,
             ],
-            'products' => $products->map(fn (Produk $product) => [
-                'nama' => $product->nama_produk,
-                'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
-                'harga' => (float) $product->harga_sewa,
-                'stok' => (int) $product->total_stock_unit,
-                'status' => $product->total_stock_unit > 0 ? 'Tersedia' : 'Stok Habis',
-            ])->values()->all(),
-            'bookings' => $bookings->take(10)->map(fn (DetailPemesananTenant $booking) => [
-                'kode' => $booking->sub_order_eksternal ?: 'MC-'.str_pad((string) $booking->id_pemesanan, 4, '0', STR_PAD_LEFT),
-                'produk' => $productsById->get($booking->id_produk) ? $productsById->get($booking->id_produk)->nama_produk : 'Produk',
-                'penyewa' => '-',
-                'mulai' => $this->formatDate($booking->waktu_ambil_booking),
-                'selesai' => $this->formatDate($booking->waktu_kembali_booking),
-                'status' => $booking->status_sewa ?: 'Booking Aktif',
-                'total' => (float) $booking->total_harga,
-            ])->values()->all(),
-            'commissions' => $commissions->map(function (KomisiPlatform $commission) use ($bookings) {
-                $booking = $bookings->firstWhere('id_pemesanan', $commission->id_pemesanan);
-
-                return [
-                    'kode' => 'KOM-'.str_pad((string) $commission->id_komisi, 4, '0', STR_PAD_LEFT),
-                    'tanggal' => $this->formatDate($commission->created_at),
-                    'persen' => (float) $commission->persentase_komisi_platform,
-                    'komisi' => (float) $commission->total_komisi,
-                    'pendapatan' => $booking ? (float) $booking->total_harga : 0.0,
-                ];
-            })->values()->all(),
+            'products' => $productRows->all(),
+            'bookings' => $bookingRows->take(10)->all(),
+            'commissions' => $commissionRows->all(),
+            'commission_billing' => $this->commissionBilling($tenant, $commissions),
         ];
+    }
+
+    /**
+     * @param  Collection<int, KomisiPlatform>  $commissions
+     * @return array<string, mixed>
+     */
+    protected function commissionBilling(Tenant $tenant, Collection $commissions): array
+    {
+        $amount = (float) $commissions->sum('total_komisi');
+
+        if ($commissions->isEmpty() || $amount <= 0.0) {
+            return [
+                'has_bill' => false,
+                'amount' => 0.0,
+                'periode' => null,
+                'jatuh_tempo' => null,
+                'reference' => null,
+                'qris_data_uri' => null,
+            ];
+        }
+
+        $firstDate = Carbon::instance(new \DateTimeImmutable((string) $commissions->min('created_at')));
+        $lastDate = Carbon::instance(new \DateTimeImmutable((string) $commissions->max('created_at')));
+        $firstDate->locale('id');
+        $lastDate->locale('id');
+
+        $periode = $firstDate->isSameMonth($lastDate)
+            ? $firstDate->translatedFormat('F Y')
+            : $firstDate->translatedFormat('F Y').' - '.$lastDate->translatedFormat('F Y');
+
+        $dueDate = $lastDate->copy()->addMonthNoOverflow()->day(10);
+        $dueDate->locale('id');
+        $reference = 'KOM-'.$tenant->id_tenant.'-'.$lastDate->format('Ym');
+
+        $payload = implode('|', [
+            'MIRRORCAM-COMMISSION',
+            'TENANT:'.$tenant->nama_toko,
+            'AMOUNT:'.number_format($amount, 0, '', ''),
+            'PERIOD:'.$periode,
+            'REF:'.$reference,
+        ]);
+
+        return [
+            'has_bill' => true,
+            'amount' => $amount,
+            'periode' => $periode,
+            'jatuh_tempo' => $dueDate->translatedFormat('d F Y'),
+            'reference' => $reference,
+            'qris_data_uri' => $this->qrisDataUri($payload),
+        ];
+    }
+
+    protected function qrisDataUri(string $payload): ?string
+    {
+        try {
+            $renderer = new ImageRenderer(new RendererStyle(260, 2), new SvgImageBackEnd);
+            $svg = (new Writer($renderer))->writeString($payload);
+
+            return 'data:image/svg+xml;base64,'.base64_encode($svg);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -181,6 +280,14 @@ class GetTenantDashboardMetricsUseCase
             'products' => [],
             'bookings' => [],
             'commissions' => [],
+            'commission_billing' => [
+                'has_bill' => false,
+                'amount' => 0.0,
+                'periode' => null,
+                'jatuh_tempo' => null,
+                'reference' => null,
+                'qris_data_uri' => null,
+            ],
         ];
     }
 
@@ -233,9 +340,7 @@ class GetTenantDashboardMetricsUseCase
     protected function revenueBetween(Collection $bookings, array $netByBooking, Carbon $start, Carbon $end): float
     {
         return (float) $bookings->filter(function (DetailPemesananTenant $booking) use ($start, $end) {
-            $date = $booking->waktu_ambil_booking
-                ? Carbon::parse($booking->waktu_ambil_booking)
-                : $booking->created_at;
+            $date = $booking->waktu_ambil_booking ?? $booking->created_at;
 
             return $date !== null && $date->betweenIncluded($start, $end);
         })->sum(fn (DetailPemesananTenant $booking) => (float) ($netByBooking[$booking->id_pemesanan] ?? 0));
