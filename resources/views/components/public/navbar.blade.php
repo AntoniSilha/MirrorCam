@@ -18,23 +18,27 @@
 
             <!-- Nav Menu Links (Desktop, centered) -->
             <!-- Nav Menu Links (Desktop, centered) -->
-            <nav class="hidden md:flex items-center gap-6 lg:gap-8 text-xs lg:text-sm font-semibold text-[#000000] absolute left-1/2 -translate-x-1/2">
-                <a href="{{ route('home') }}" class="relative py-2 whitespace-nowrap transition hover:text-black {{ request()->routeIs('home') ? 'font-bold text-[#000000]' : 'text-gray-600' }}">
-                    Beranda
-                    @if (request()->routeIs('home'))
-                        <span class="absolute bottom-0 left-0 w-full h-[2px] bg-[#000000]"></span>
-                    @endif
-                </a>
-                <a href="#" class="relative py-2 whitespace-nowrap text-gray-600 transition hover:text-black">
-                    Tenant
-                </a>
-                <a href="{{ route('pengaduan.index') }}" class="relative py-2 whitespace-nowrap transition hover:text-black {{ request()->routeIs('pengaduan.*') ? 'font-bold text-[#000000]' : 'text-gray-600' }}">
-                    Pengaduan
-                    @if (request()->routeIs('pengaduan.*'))
-                        <span class="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#000000]"></span>
-                    @endif
-                </a>
-            </nav>
+            <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-xs lg:text-sm font-semibold text-[#000000] absolute left-1/2 -translate-x-1/2">
+    <a href="{{ route('home') }}"
+       class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('home') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
+        Beranda
+    </a>
+
+    <a href="{{ route('tenant.katalog') }}"
+       class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('tenant.*') || request()->is('tenant/*') || request()->is('katalog-tenant*') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
+        Tenant
+    </a>
+
+    <a href="{{ route('katalog.index') }}"
+   class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('katalog.*') || request()->routeIs('tenant.*') || request()->is('katalog*') || request()->is('tenant/*') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
+    Produk
+    </a>
+
+    <a href="{{ route('pengaduan.index') }}"
+       class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('pengaduan.*') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
+        Pengaduan
+    </a>
+</nav>
 
             <!-- Header Actions / Auth (Right side) -->
             <div class="flex items-center gap-3 shrink-0">

@@ -2,19 +2,40 @@
 
 use App\Http\Controllers\MitraRegisterController;
 use App\Modules\Authentication\Controllers\GoogleRegistrationController;
-use Illuminate\Support\Facades\Route;
+use App\Portals\Customer\Controllers\BookingCartController;
 use App\Portals\Customer\Controllers\HomeController;
+use App\Portals\Customer\Controllers\ProductCatalogController;
+use App\Portals\Customer\Controllers\TenantCatalogController;
+use Illuminate\Support\Facades\Route;
 
 // use Laravel\Mcp\Request;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
 // Route Register & Login Fallback
 Route::get('/register', [GoogleRegistrationController::class, 'redirect'])->name('register');
 Route::get('/login', [GoogleRegistrationController::class, 'redirect'])->name('login');
 
+// Halaman Katalog Produk Lintas Tenant (Semua Alat dari Seluruh Mitra)
+Route::get('/katalog', [ProductCatalogController::class, 'index'])->name('katalog.index');
+
+// Halaman Katalog Spesifik Per Tenant
+Route::get('/katalog-tenant', [TenantCatalogController::class, 'show'])->name('tenant.katalog.default');
+Route::get('/tenant/{id?}/katalog', [TenantCatalogController::class, 'show'])->name('tenant.katalog');
+
+// Halaman Detail Produk & Pilihan Durasi Booking (Saat tombol "Sewa" diklik)
+Route::get('/produk/{id}', [BookingCartController::class, 'showProduct'])->name('produk.show');
+
+// Route Terproteksi Customer (Wajib Login)
 Route::middleware(['auth', 'role.user'])->group(function () {
     Route::livewire('/dashboard', 'pages::customer.dashboard')->name('dashboard');
     Route::resource('pengaduan', \App\Http\Controllers\PengaduanPelangganController::class)->only(['index', 'create', 'store', 'show']);
+
+    // Halaman Keranjang Sewa Multi-Tenant & Checkout
+    Route::get('/keranjang', [BookingCartController::class, 'cartIndex'])->name('keranjang.index');
+    Route::post('/keranjang/tambah', [BookingCartController::class, 'addToCart'])->name('keranjang.add');
+    Route::post('/keranjang/hapus', [BookingCartController::class, 'removeFromCart'])->name('keranjang.remove');
+    Route::post('/keranjang/checkout', [BookingCartController::class, 'checkout'])->name('keranjang.checkout');
 });
 
 Route::get('/auth/google/redirect', [GoogleRegistrationController::class, 'redirect'])->name('google.redirect');

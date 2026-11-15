@@ -10,5 +10,9 @@ class Tenant extends Model
 
     protected $primaryKey = 'id_tenant';
 
-    protected $guarded = [];
+    protected $guarded = ['id_tenant'];
+    public function produks()
+    {
+        return $this->hasMany(Produk::class, 'id_tenant', 'id_tenant');
+    }
 }
