@@ -46,4 +46,14 @@ class Produk extends Model
 
         return asset('storage/' . ltrim($foto, '/'));
     }
+
+    public function getTotalStokUnitAttribute(): int
+    {
+        return (int) ($this->attributes['total_stok_unit'] ?? $this->attributes['total_stock_unit'] ?? 0);
+    }
+
+    public function getTotalStockUnitAttribute(): int
+    {
+        return (int) ($this->attributes['total_stock_unit'] ?? $this->attributes['total_stok_unit'] ?? 0);
+    }
 }
