@@ -11,7 +11,6 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class PengaduanPelangganController extends Controller
@@ -66,14 +65,14 @@ class PengaduanPelangganController extends Controller
         if (! empty($keyword)) {
             $query->where(function ($q) use ($keyword) {
                 $q->where('nomor_tiket', 'like', "%{$keyword}%")
-                  ->orWhere('kronologi_kejadian', 'like', "%{$keyword}%")
-                  ->orWhere('kategori_pelanggaran', 'like', "%{$keyword}%")
-                  ->orWhereHas('pemesanan.produk', function ($pq) use ($keyword) {
-                      $pq->where('nama_produk', 'like', "%{$keyword}%");
-                  })
-                  ->orWhereHas('tenant', function ($tq) use ($keyword) {
-                      $tq->where('nama_toko', 'like', "%{$keyword}%");
-                  });
+                    ->orWhere('kronologi_kejadian', 'like', "%{$keyword}%")
+                    ->orWhere('kategori_pelanggaran', 'like', "%{$keyword}%")
+                    ->orWhereHas('pemesanan.produk', function ($pq) use ($keyword) {
+                        $pq->where('nama_produk', 'like', "%{$keyword}%");
+                    })
+                    ->orWhereHas('tenant', function ($tq) use ($keyword) {
+                        $tq->where('nama_toko', 'like', "%{$keyword}%");
+                    });
             });
         }
 
@@ -103,6 +102,7 @@ class PengaduanPelangganController extends Controller
             'Penahanan Deposit Sepihak',
             'Manipulasi Jam Pengembalian',
             'Perilaku Buruk / Intimidasi Petugas Hub',
+            'Lainnya',
         ];
 
         $viewName = view()->exists('customer.pengaduan.index') ? 'customer.pengaduan.index' : 'pages.customer.pengaduan.index';
@@ -173,7 +173,7 @@ class PengaduanPelangganController extends Controller
         // Generate standard Ticket Number: AMC-YYYY-XXXX
         $year = date('Y');
         $countThisYear = PengaduanPelanggan::whereYear('created_at', $year)->count() + 1;
-        $nomorTiket = 'AMC-' . $year . '-' . str_pad((string) $countThisYear, 4, '0', STR_PAD_LEFT);
+        $nomorTiket = 'AMC-'.$year.'-'.str_pad((string) $countThisYear, 4, '0', STR_PAD_LEFT);
 
         $tenantId = $request->id_tenant ?: $booking->id_tenant;
 
@@ -209,7 +209,7 @@ class PengaduanPelangganController extends Controller
             ->where('id_akun', $user->id_akun)
             ->where(function ($q) use ($id) {
                 $q->where('id_pengaduan', $id)
-                  ->orWhere('nomor_tiket', $id);
+                    ->orWhere('nomor_tiket', $id);
             })
             ->firstOrFail();
 

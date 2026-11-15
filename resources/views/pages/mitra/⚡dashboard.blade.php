@@ -33,6 +33,10 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
     public string $deskripsi_lengkap = '';
 
+    public string $productSearch = '';
+
+    public string $bookingSearch = '';
+
     public function mount(): void
     {
         $this->autoAcceptBooking = (bool) session('mitra.auto_accept_booking', true);
@@ -45,7 +49,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        return app(GetTenantDashboardMetricsUseCase::class)->execute($user);
+        return app(GetTenantDashboardMetricsUseCase::class)->execute($user, $this->productSearch, $this->bookingSearch);
     }
 
     #[Computed]
@@ -678,12 +682,24 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                 <h1 class="text-lg font-bold tracking-tight text-black">Kelola Produk</h1>
                                 <p class="mt-1 text-xs text-neutral-500">Pantau katalog inventaris gear dan ketersediaan unit Anda.</p>
                             </div>
-                            <button type="button" wire:click="openProductModal" class="inline-flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
-                                </svg>
-                                <span>Tambah Produk</span>
-                            </button>
+
+                            <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                                <div class="relative w-full sm:w-64">
+                                    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-neutral-400">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                                        </svg>
+                                    </span>
+                                    <input type="search" wire:model.live.debounce.300ms="productSearch" autocomplete="off" placeholder="Cari produk, kategori, status..." class="w-full rounded-md border border-neutral-300 bg-white py-2.5 pl-9 pr-3 text-xs text-black outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-1 focus:ring-black">
+                                </div>
+
+                                <button type="button" wire:click="openProductModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
+                                    </svg>
+                                    <span>Tambah Produk</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -710,7 +726,13 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="px-6 py-12 text-center text-xs text-neutral-500">Belum ada produk pada katalog Anda.</td>
+                                            <td colspan="5" class="px-6 py-12 text-center text-xs text-neutral-500">
+                                                @if (trim($productSearch) !== '')
+                                                    Tidak ada produk yang cocok dengan pencarian "{{ $productSearch }}".
+                                                @else
+                                                    Belum ada produk pada katalog Anda.
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -719,9 +741,20 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                     </section>
                 @elseif ($section === 'pesanan')
                     <section class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                        <div class="border-b border-neutral-200 px-5 py-5 md:px-6">
-                            <h1 class="text-lg font-bold tracking-tight text-black">Kelola Pesanan Sewa</h1>
-                            <p class="mt-1 text-xs text-neutral-500">Daftar pesanan terbaru beserta status penyewaan unit.</p>
+                        <div class="flex flex-col gap-4 border-b border-neutral-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between md:px-6">
+                            <div>
+                                <h1 class="text-lg font-bold tracking-tight text-black">Kelola Pesanan Sewa</h1>
+                                <p class="mt-1 text-xs text-neutral-500">Daftar pesanan terbaru beserta status penyewaan unit.</p>
+                            </div>
+
+                            <div class="relative w-full sm:w-72">
+                                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-neutral-400">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                                    </svg>
+                                </span>
+                                <input type="search" wire:model.live.debounce.300ms="bookingSearch" autocomplete="off" placeholder="Cari kode, produk, penyewa, status..." class="w-full rounded-md border border-neutral-300 bg-white py-2.5 pl-9 pr-3 text-xs text-black outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-1 focus:ring-black">
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -750,7 +783,13 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-12 text-center text-xs text-neutral-500">Belum ada pesanan sewa.</td>
+                                            <td colspan="6" class="px-6 py-12 text-center text-xs text-neutral-500">
+                                                @if (trim($bookingSearch) !== '')
+                                                    Tidak ada pesanan yang cocok dengan pencarian "{{ $bookingSearch }}".
+                                                @else
+                                                    Belum ada pesanan sewa.
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -847,54 +886,142 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                         </div>
                     </section>
                 @elseif ($section === 'komisi')
+                    @php
+                        $billing = $dashboard['commission_billing'];
+                        $bank = config('mirrorcam.platform_bank');
+                    @endphp
+
                     <section class="space-y-5">
-                        <div class="grid gap-4 md:grid-cols-3">
-                            <div class="rounded-lg border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PENDAPATAN KOTOR</p>
-                                <p class="mt-4 text-xl font-bold tracking-tight text-black">{{ $this->rupiah($stats['pendapatan_kotor']) }}</p>
+                        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                            <h1 class="text-[25px] font-bold leading-tight tracking-tight text-black md:text-[28px]">Pembayaran Komisi</h1>
+                            <p class="mt-2 text-xs leading-relaxed text-neutral-500 md:text-sm">Kelola tanggungan komisi {{ $tenant['nama_toko'] }} kepada PT. MirrorCam.</p>
+                        </div>
+
+                        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                            <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Tanggungan Komisi ke MirrorCam</h2>
+
+                            <div class="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">JUMLAH TANGGUNGAN</p>
+                                    @if ($billing['has_bill'])
+                                        <p class="mt-2 text-[30px] font-bold leading-tight tracking-tight text-black md:text-[36px]">{{ $this->rupiah($billing['amount']) }}</p>
+                                    @else
+                                        <p class="mt-2 text-[30px] font-bold leading-tight tracking-tight text-neutral-700 md:text-[36px]">Belum tersedia</p>
+                                    @endif
+                                </div>
+
+                                @if ($billing['has_bill'])
+                                    <a href="#qris-pembayaran" class="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-[#e9e9e9] px-5 py-3 text-xs font-semibold text-black transition hover:bg-[#dedede]">
+                                        Bayar Sekarang
+                                    </a>
+                                @else
+                                    <button type="button" disabled class="inline-flex cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md bg-[#e9e9e9] px-5 py-3 text-xs font-semibold text-neutral-400">
+                                        Bayar Sekarang
+                                    </button>
+                                @endif
                             </div>
-                            <div class="rounded-lg border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">KOMISI PLATFORM</p>
-                                <p class="mt-4 text-xl font-bold tracking-tight text-black">{{ $this->rupiah($stats['komisi_platform']) }}</p>
-                            </div>
-                            <div class="rounded-lg border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PENDAPATAN BERSIH</p>
-                                <p class="mt-4 text-xl font-bold tracking-tight text-black">{{ $this->rupiah($stats['pendapatan_tenant']) }}</p>
+
+                            <div class="mt-6 grid gap-4 border-t border-neutral-200 pt-5 sm:grid-cols-3">
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PENYEDIA LAYANAN</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-black">PT. MirrorCam</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PERIODE TAGIHAN</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-black">{{ $billing['periode'] ?? 'Belum tersedia' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">JATUH TEMPO</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-black">{{ $billing['jatuh_tempo'] ?? 'Belum tersedia' }}</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                            <div class="border-b border-neutral-200 px-5 py-5 md:px-6">
-                                <h1 class="text-lg font-bold tracking-tight text-black">Pembayaran Komisi</h1>
-                                <p class="mt-1 text-xs text-neutral-500">Rincian komisi platform dari transaksi penyewaan tenant.</p>
+                        <div class="grid gap-5 lg:grid-cols-2">
+                            <div id="qris-pembayaran" class="scroll-mt-24 rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                                <div class="flex items-start justify-between gap-3">
+                                    <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Pembayaran via QRIS</h2>
+                                    <span class="text-sm font-bold tracking-wide text-black">QRIS</span>
+                                </div>
+                                <p class="mt-3 text-xs leading-relaxed text-neutral-500 md:text-sm">Bayar komisi dengan memindai QRIS melalui aplikasi bank atau dompet digital yang mendukung QRIS.</p>
+
+                                <div class="mt-5 rounded-lg border border-neutral-200 bg-[#f4f4f5] px-5 py-6">
+                                    @if ($billing['has_bill'] && $billing['qris_data_uri'])
+                                        <div class="flex flex-col items-center gap-3">
+                                            <img src="{{ $billing['qris_data_uri'] }}" alt="QRIS Pembayaran Komisi" class="h-44 w-44 rounded-md bg-white p-2 shadow-xs">
+                                            <p class="text-sm font-bold text-black">QRIS siap dipindai</p>
+                                            <p class="text-center text-[11px] leading-relaxed text-neutral-500">
+                                                Nominal {{ $this->rupiah($billing['amount']) }} &middot; {{ $billing['periode'] }}<br>
+                                                Ref. {{ $billing['reference'] }}
+                                            </p>
+                                        </div>
+                                    @else
+                                        <div class="flex flex-col items-center gap-3 py-3 text-center">
+                                            <span class="flex h-11 w-11 items-center justify-center rounded-lg bg-[#e9e9e9] text-neutral-500">
+                                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zM14 14h2v2h-2v-2zm4 0h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2z" />
+                                                </svg>
+                                            </span>
+                                            <p class="text-sm font-bold text-black">QRIS belum tersedia</p>
+                                            <p class="text-[11px] leading-relaxed text-neutral-500">QRIS tersedia setelah tagihan diterbitkan.<br>Belum ada kode pembayaran yang dapat dipindai.</p>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full min-w-[680px] text-left text-xs">
-                                    <thead class="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-500">
-                                        <tr>
-                                            <th class="px-6 py-3 font-semibold">Kode</th>
-                                            <th class="px-6 py-3 font-semibold">Tanggal</th>
-                                            <th class="px-6 py-3 font-semibold">Nilai Transaksi</th>
-                                            <th class="px-6 py-3 font-semibold">Persentase</th>
-                                            <th class="px-6 py-3 font-semibold">Komisi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-neutral-100">
-                                        @forelse ($dashboard['commissions'] as $commission)
-                                            <tr class="transition hover:bg-neutral-50">
-                                                <td class="px-6 py-4 font-semibold text-black">{{ $commission['kode'] }}</td>
-                                                <td class="px-6 py-4 text-neutral-500">{{ $commission['tanggal'] }}</td>
-                                                <td class="px-6 py-4 text-neutral-600">{{ $this->rupiah($commission['pendapatan']) }}</td>
-                                                <td class="px-6 py-4 text-neutral-500">{{ rtrim(rtrim(number_format($commission['persen'], 2, ',', '.'), '0'), ',') }}%</td>
-                                                <td class="px-6 py-4 font-medium text-black">{{ $this->rupiah($commission['komisi']) }}</td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="5" class="px-6 py-12 text-center text-xs text-neutral-500">Belum ada data komisi platform.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
+
+                            <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="flex h-6 w-6 items-center justify-center text-black">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6M3 9h18" />
+                                        </svg>
+                                    </span>
+                                    <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Informasi Rekening Tujuan</h2>
+                                </div>
+                                <p class="mt-3 text-xs leading-relaxed text-neutral-500 md:text-sm">Informasi rekening penyedia layanan untuk pembayaran komisi kepada PT. MirrorCam.</p>
+
+                                <dl class="mt-4 divide-y divide-neutral-200">
+                                    <div class="flex items-center justify-between gap-4 py-3.5">
+                                        <dt class="text-xs text-neutral-500 md:text-sm">Atas nama</dt>
+                                        <dd class="text-right text-xs font-semibold text-black md:text-sm">{{ $bank['atas_nama'] }}</dd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-4 py-3.5">
+                                        <dt class="text-xs text-neutral-500 md:text-sm">Bank</dt>
+                                        <dd class="text-right text-xs font-semibold text-black md:text-sm">{{ $bank['nama_bank'] }}</dd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-4 py-3.5">
+                                        <dt class="text-xs text-neutral-500 md:text-sm">Nomor rekening</dt>
+                                        <dd class="text-right text-xs font-semibold text-black md:text-sm">{{ $bank['nomor_rekening'] }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                            <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Cara Membayar Komisi</h2>
+
+                            <div class="mt-5 grid gap-5 sm:grid-cols-3">
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#f1f1f1] text-[11px] font-bold text-black">1</span>
+                                    <div>
+                                        <p class="text-xs font-bold text-black md:text-sm">Periksa tagihan</p>
+                                        <p class="mt-1 text-[11px] leading-relaxed text-neutral-500">Setelah diterbitkan, cek jumlah tanggungan, periode, dan jatuh tempo.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#f1f1f1] text-[11px] font-bold text-black">2</span>
+                                    <div>
+                                        <p class="text-xs font-bold text-black md:text-sm">Pilih Bayar Sekarang</p>
+                                        <p class="mt-1 text-[11px] leading-relaxed text-neutral-500">QRIS pembayaran akan tersedia setelah tagihan diterbitkan.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#f1f1f1] text-[11px] font-bold text-black">3</span>
+                                    <div>
+                                        <p class="text-xs font-bold text-black md:text-sm">Pindai dan bayar</p>
+                                        <p class="mt-1 text-[11px] leading-relaxed text-neutral-500">Periksa penerima serta nominal di aplikasi, lalu simpan bukti pembayaran.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>

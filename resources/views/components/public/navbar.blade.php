@@ -23,6 +23,18 @@
             <nav class="hidden md:flex items-center gap-6 lg:gap-8 text-xs sm:text-sm font-semibold text-[#000000] absolute left-1/2 -translate-x-1/2">
                 <a href="{{ route('home') }}" class="py-1.5 whitespace-nowrap transition hover:text-black {{ request()->routeIs('home') ? 'font-bold text-[#000000]' : 'text-gray-700' }}">
                     Beranda
+                    @if (request()->routeIs('home'))
+                        <span class="absolute bottom-0 left-0 w-full h-[2px] bg-[#000000]"></span>
+                    @endif
+                </a>
+                <a href="#" class="relative py-2 whitespace-nowrap text-gray-600 transition hover:text-black">
+                    Tenant
+                </a>
+                <a href="{{ route('pengaduan.index') }}" class="relative py-2 whitespace-nowrap transition hover:text-black {{ request()->routeIs('pengaduan.*') ? 'font-bold text-[#000000]' : 'text-gray-600' }}">
+                    Pengaduan
+                    @if (request()->routeIs('pengaduan.*'))
+                        <span class="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#000000]"></span>
+                    @endif
                 </a>
                 @if (request()->routeIs('tenant.*'))
                     <a href="{{ route('tenant.index') }}" class="px-3.5 py-1.5 whitespace-nowrap bg-[#000000] text-[#ffffff] rounded-[4px] font-semibold text-xs transition">
@@ -66,8 +78,8 @@
                                 @endif
                             </div>
                             <div class="hidden sm:flex flex-col text-left leading-tight">
-                                <span class="text-xs font-bold text-[#000000] max-w-[120px] truncate">{{ auth()->user()->nama_lengkap_ktp ?? auth()->user()->name ?? 'Antoni Silha' }}</span>
-                                <span class="text-[10px] text-gray-500 font-medium">User</span>
+                                <span class="text-xs font-bold text-[#000000] max-w-[120px] truncate">{{ auth()->user()->name }}</span>
+                                <span class="text-[10px] text-gray-500">{{ auth()->user()->role_label }}</span>
                             </div>
                             <svg class="w-3.5 h-3.5 text-gray-500 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
