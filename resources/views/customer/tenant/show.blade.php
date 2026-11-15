@@ -157,9 +157,9 @@
                                 </span>
                             </div>
 
-                            <button type="button" class="bg-[#000000] text-[#ffffff] text-xs font-semibold px-3 py-1.5 rounded-[4px] hover:bg-neutral-800 transition">
-                                Detail Gear
-                            </button>
+                            <a href="{{ route('produk.show', $produk->id_produk) }}" class="bg-[#000000] text-[#ffffff] text-xs font-semibold px-3 py-1.5 rounded-[4px] hover:bg-neutral-800 transition">
+                                Detail
+                            </a>
                         </div>
                     </div>
                 @endforeach

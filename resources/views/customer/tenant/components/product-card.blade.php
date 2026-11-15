@@ -73,32 +73,31 @@
             </div>
 
             <div class="grid grid-cols-2 gap-2 mt-3.5">
-    <button type="button"
-            onclick='openDetailModal(@json($produk))'
-            class="py-2.5 px-3 rounded-[4px] bg-[#f9f9f9] hover:bg-[#d9d9d9]/60 border border-black/10 text-[#000000] text-xs font-medium text-center whitespace-nowrap transition">
-        {{ $isStudio ? 'Fasilitas Suite' : 'Detail Spek' }}
-    </button>
+                <a href="{{ route('produk.show', $produk->id_produk) }}"
+                   class="py-2.5 px-3 rounded-[4px] bg-[#f9f9f9] hover:bg-[#d9d9d9]/60 border border-black/10 text-[#000000] text-xs font-medium inline-flex items-center justify-center whitespace-nowrap transition">
+                    Detail
+                </a>
 
-    @if(($produk->total_stock_unit ?? 0) > 0)
-        <a href="{{ route('produk.show', $produk->id_produk) }}"
-           class="py-2.5 px-3 rounded-[4px] bg-[#000000] hover:bg-black/85 text-[#ffffff] text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition">
-            <!-- Ikon Keranjang dengan Tanda Plus -->
-            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="8" cy="21" r="1"/>
-                <circle cx="19" cy="21" r="1"/>
-                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
-                <path d="M13 5v6"/>
-                <path d="M10 8h6"/>
-            </svg>
-            <span>Sewa</span>
-        </a>
-    @else
-        <button type="button" disabled
-                class="py-2.5 px-3 rounded-[4px] bg-[#d9d9d9] text-black/40 cursor-not-allowed text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
-            <span>Sewa</span>
-        </button>
-    @endif
-</div>
+                @if(($produk->total_stock_unit ?? 0) > 0)
+                    <a href="{{ route('produk.show', $produk->id_produk) }}"
+                       class="py-2.5 px-3 rounded-[4px] bg-[#000000] hover:bg-black/85 text-[#ffffff] text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition">
+                        <!-- Ikon Keranjang dengan Tanda Plus -->
+                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="8" cy="21" r="1"/>
+                            <circle cx="19" cy="21" r="1"/>
+                            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+                            <path d="M13 5v6"/>
+                            <path d="M10 8h6"/>
+                        </svg>
+                        <span>Sewa</span>
+                    </a>
+                @else
+                    <button type="button" disabled
+                            class="py-2.5 px-3 rounded-[4px] bg-[#d9d9d9] text-black/40 cursor-not-allowed text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+                        <span>Sewa</span>
+                    </button>
+                @endif
+            </div>
         </div>
     </div>
 </div>

@@ -68,31 +68,4 @@
     </div>
 </div>
 
-@include('customer.tenant.components.detail-modal')
-
-<script>
-    function openDetailModal(produk) {
-        const fotoUtama = (produk.galeri && produk.galeri.length > 0)
-            ? produk.galeri[0].url_foto_produk
-            : 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80';
-
-        document.getElementById('detailImg').src = fotoUtama;
-        document.getElementById('detailKategori').textContent = produk.kategori ? produk.kategori.nama_kategori : 'Gear';
-        document.getElementById('detailNama').textContent = produk.nama_produk;
-        document.getElementById('detailDeskripsi').textContent = produk.deskripsi_lengkap || 'Spesifikasi standar industri.';
-        document.getElementById('detailWarna').textContent = produk.color_produk || 'Black';
-        document.getElementById('detailStok').textContent = produk.total_stok_unit + ' Unit';
-        document.getElementById('detailHarga').textContent = 'Rp ' + Number(produk.harga_sewa).toLocaleString('id-ID') + ' / hari';
-
-        const modal = document.getElementById('detailModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-
-    function closeDetailModal() {
-        const modal = document.getElementById('detailModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-</script>
 @endsection

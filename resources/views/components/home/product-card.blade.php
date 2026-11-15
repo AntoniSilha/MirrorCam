@@ -54,12 +54,12 @@
 
     <!-- Action Buttons -->
     <div class="grid grid-cols-2 gap-2 mt-4 pt-2 border-t border-[#f0f0f0]">
-        <!-- Detail Gear Button: Background #d9d9d9, Text #000000 -->
+        <!-- Detail Button: Background #d9d9d9, Text #000000 -->
         <a
-            href="{{ route('home', ['keyword' => $product['name']]) }}#katalog"
+            href="{{ route('produk.show', $product['id']) }}"
             class="py-1.5 px-2 bg-[#d9d9d9] hover:bg-[#c7c7c7] text-[#000000] text-center text-xs font-semibold rounded-[4px] transition"
         >
-            Detail Gear
+            Detail
         </a>
 
         <!-- Sewa Button: Background #000000, Text #ffffff -->

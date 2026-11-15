@@ -45,12 +45,15 @@
 
             <!-- Header Actions / Auth (Right side) -->
             <div class="flex items-center gap-4 shrink-0">
-                <!-- Shopping Bag / Cart Icon with Badge 3 -->
-                <a href="#" class="relative p-1 text-[#000000] hover:opacity-80 transition" title="Keranjang Belanja">
+                @php($cartCount = collect(session('mirrorcam_cart', []))->count())
+                <!-- Shopping Bag / Cart Icon with Cart Item Count -->
+                <a href="{{ route('keranjang.index') }}" class="relative p-1 text-[#000000] hover:opacity-80 transition" title="Keranjang Belanja" aria-label="Keranjang Belanja ({{ $cartCount }} item)">
                     <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[#000000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
-                    <span class="absolute -top-1 -right-1 bg-[#000000] text-white text-[9px] sm:text-[10px] font-extrabold rounded-[3px] w-4 h-4 flex items-center justify-center">3</span>
+                    @if ($cartCount > 0)
+                        <span class="absolute -top-1 -right-1 bg-[#000000] text-white text-[9px] sm:text-[10px] font-extrabold rounded-[3px] min-w-4 h-4 px-1 flex items-center justify-center">{{ $cartCount }}</span>
+                    @endif
                 </a>
 
                 @auth
@@ -68,9 +71,6 @@
                                 <span class="text-xs font-bold text-[#000000] max-w-[120px] truncate">{{ auth()->user()->name }}</span>
                                 <span class="text-[10px] text-gray-500">{{ auth()->user()->role_label }}</span>
                             </div>
-                            <svg class="w-3.5 h-3.5 text-gray-500 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
                         </a>
                         <form action="{{ route('logout') }}" method="POST" class="inline">
                             @csrf

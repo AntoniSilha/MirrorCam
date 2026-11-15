@@ -758,16 +758,6 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                     <div class="mt-4 space-y-2.5">
                                         <div class="flex items-center justify-between gap-3 rounded-md bg-[#f1f1f1] px-3 py-2.5">
                                             <div class="min-w-0">
-                                                <p class="text-[11px] font-bold text-black">Auto-Accept Booking Standby</p>
-                                                <p class="mt-0.5 text-[9px] leading-relaxed text-neutral-500">Otomatis setujui sewa jika unit berstatus ready</p>
-                                            </div>
-                                            <button type="button" wire:click="toggleAutoAccept" class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition {{ $autoAcceptBooking ? 'bg-black' : 'bg-neutral-300' }}">
-                                                <span class="inline-block h-4 w-4 rounded-full bg-white shadow-xs transition {{ $autoAcceptBooking ? 'translate-x-[18px]' : 'translate-x-0.5' }}"></span>
-                                            </button>
-                                        </div>
-
-                                        <div class="flex items-center justify-between gap-3 rounded-md bg-[#f1f1f1] px-3 py-2.5">
-                                            <div class="min-w-0">
                                                 <p class="text-[11px] font-bold text-black">Mode Libur / Maintenance Toko</p>
                                                 <p class="mt-0.5 text-[9px] leading-relaxed text-neutral-500">Tutup toko sementara</p>
                                             </div>

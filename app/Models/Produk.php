@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Produk extends Model
 {
     protected $table = 'produks';
+
     protected $primaryKey = 'id_produk';
+
     protected $guarded = ['id_produk'];
 
     protected $appends = ['primary_image'];
@@ -36,7 +39,7 @@ class Produk extends Model
     {
         $foto = $this->galeri->first()?->url_foto_produk;
 
-        if (!$foto) {
+        if (! $foto) {
             return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80';
         }
 
@@ -44,7 +47,7 @@ class Produk extends Model
             return $foto;
         }
 
-        return asset('storage/' . ltrim($foto, '/'));
+        return asset('storage/'.ltrim($foto, '/'));
     }
 
     public function getTotalStokUnitAttribute(): int
