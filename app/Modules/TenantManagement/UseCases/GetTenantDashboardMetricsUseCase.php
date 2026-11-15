@@ -40,6 +40,7 @@ class GetTenantDashboardMetricsUseCase
     protected function databaseData(Tenant $tenant, string $productSearch = '', string $bookingSearch = ''): array
     {
         $products = Produk::query()
+            ->with('galeri')
             ->where('id_tenant', $tenant->id_tenant)
             ->orderBy('nama_produk')
             ->get();
@@ -100,6 +101,7 @@ class GetTenantDashboardMetricsUseCase
 
         $productRows = $products->map(fn (Produk $product) => [
             'nama' => $product->nama_produk,
+            'foto' => $product->primary_image,
             'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
             'harga' => (float) $product->harga_sewa,
             'stok' => (int) $product->total_stock_unit,

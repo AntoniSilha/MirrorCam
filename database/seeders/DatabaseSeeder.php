@@ -17,12 +17,12 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Kategori Produk (Master Data Kategori)
         $categoriesData = [
-            ['id_kategori' => 1, 'nama_kategori' => 'Kamera Cinema & Mirrorless'],
-            ['id_kategori' => 2, 'nama_kategori' => 'Lensa Prime & Cine'],
-            ['id_kategori' => 3, 'nama_kategori' => 'Lighting & Rigging'],
-            ['id_kategori' => 4, 'nama_kategori' => 'Audio & Monitor'],
-            ['id_kategori' => 5, 'nama_kategori' => 'Drone & Gimbal'],
-            ['id_kategori' => 6, 'nama_kategori' => 'Studio'],
+            ['id_kategori' => 1, 'nama_kategori' => 'Camera'],
+            ['id_kategori' => 2, 'nama_kategori' => 'Mic'],
+            ['id_kategori' => 3, 'nama_kategori' => 'Handphone'],
+            ['id_kategori' => 4, 'nama_kategori' => 'Sound'],
+            ['id_kategori' => 5, 'nama_kategori' => 'Studio'],
+            ['id_kategori' => 6, 'nama_kategori' => 'Lighting'],
         ];
 
         foreach ($categoriesData as $cat) {

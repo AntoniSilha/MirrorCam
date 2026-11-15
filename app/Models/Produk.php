@@ -29,6 +29,11 @@ class Produk extends Model
         return $this->hasMany(GaleriFotoProduk::class, 'id_produk', 'id_produk');
     }
 
+    public function durasi(): HasMany
+    {
+        return $this->hasMany(DurasiProduk::class, 'id_produk', 'id_produk');
+    }
+
     public function getPrimaryImageAttribute(): string
     {
         if ($this->relationLoaded('galeri') && $this->galeri->isNotEmpty()) {
