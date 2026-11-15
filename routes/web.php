@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\MitraRegisterController;
+use App\Http\Controllers\PengaduanPelangganController;
+use App\Http\Controllers\TenantController;
+use App\Models\User;
 use App\Modules\Authentication\Controllers\GoogleRegistrationController;
 use App\Portals\Customer\Controllers\BookingCartController;
 use App\Portals\Customer\Controllers\HomeController;
@@ -11,6 +14,9 @@ use Illuminate\Support\Facades\Route;
 // use Laravel\Mcp\Request;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+// Route Eksplorasi Tenant
+Route::get('/tenant', [TenantController::class, 'index'])->name('tenant.index');
+Route::get('/tenant/{tenant:slug}', [TenantController::class, 'show'])->name('tenant.show');
 
 // Route Register & Login Fallback
 Route::get('/register', [GoogleRegistrationController::class, 'redirect'])->name('register');
@@ -63,11 +69,13 @@ Route::middleware(['auth'])->group(function () {
 
 if (app()->environment('local')) {
     Route::get('/dev-login', function () {
-        $user = \App\Models\User::first();
+        $user = User::first();
         if ($user) {
-            \Illuminate\Support\Facades\Auth::login($user);
-            return redirect()->route('pengaduan.index')->with('status', 'Berhasil login sebagai ' . $user->name . ' untuk testing.');
+            Auth::login($user);
+
+            return redirect()->route('pengaduan.index')->with('status', 'Berhasil login sebagai '.$user->name.' untuk testing.');
         }
+
         return 'Tidak ada akun user di database.';
     })->name('dev.login');
 }
