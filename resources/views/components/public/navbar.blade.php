@@ -27,13 +27,13 @@
         Beranda
     </a>
 
-    <a href="{{ route('tenant.katalog') }}"
-       class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('tenant.*') || request()->is('tenant/*') || request()->is('katalog-tenant*') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
+    <a href="{{ route('tenant.index') }}"
+       class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('tenant.index') || request()->routeIs('tenant.show') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
         Tenant
     </a>
 
     <a href="{{ route('katalog.index') }}"
-   class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('katalog.*') || request()->routeIs('tenant.*') || request()->is('katalog*') || request()->is('tenant/*') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
+   class="px-3.5 py-1.5 rounded-[4px] whitespace-nowrap transition {{ request()->routeIs('katalog.*') || request()->routeIs('tenant.katalog') ? 'bg-[#000000] text-[#ffffff]' : 'text-gray-600 hover:text-[#000000]' }}">
     Produk
     </a>
 
