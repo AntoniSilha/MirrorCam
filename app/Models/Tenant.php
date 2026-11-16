@@ -41,6 +41,22 @@ class Tenant extends Model
     }
 
     /**
+     * Relationship: Settlement bank account of this tenant
+     */
+    public function rekeningSettlement(): HasOne
+    {
+        return $this->hasOne(RekeningSettlementTenant::class, 'id_tenant', 'id_tenant');
+    }
+
+    /**
+     * Accessor: Formatted Tenant ID (e.g. #TNT-001)
+     */
+    public function getIdMitraFormattedAttribute(): string
+    {
+        return '#TNT-'.str_pad((string) $this->id_tenant, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Relationship: Owner user account
      */
     public function pemilik(): BelongsTo

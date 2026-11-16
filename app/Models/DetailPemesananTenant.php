@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DetailPemesananTenant extends Model
 {
@@ -41,6 +41,11 @@ class DetailPemesananTenant extends Model
         return $this->hasMany(PengaduanPelanggan::class, 'id_pemesanan', 'id_pemesanan');
     }
 
+    public function komisiPlatform(): HasOne
+    {
+        return $this->hasOne(KomisiPlatform::class, 'id_pemesanan', 'id_pemesanan');
+    }
+
     public function getProductNameAttribute(): string
     {
         return $this->produk?->nama_produk ?? 'Kamera & Lensa MirrorCam';
@@ -55,6 +60,7 @@ class DetailPemesananTenant extends Model
     {
         $address = $this->tenant?->alamat_toko ?? 'Indonesia';
         $parts = explode(',', $address);
+
         return trim(end($parts));
     }
 
@@ -65,7 +71,7 @@ class DetailPemesananTenant extends Model
 
     public function getBookingCodeAttribute(): string
     {
-        return $this->sub_order_eksternal ?? "MC-" . str_pad((string) $this->id_pemesanan, 4, '0', STR_PAD_LEFT);
+        return $this->sub_order_eksternal ?? 'MC-'.str_pad((string) $this->id_pemesanan, 4, '0', STR_PAD_LEFT);
     }
 
     public function getStartDateAttribute(): string
@@ -85,13 +91,13 @@ class DetailPemesananTenant extends Model
     public function getReturnDeadlineAttribute(): string
     {
         return $this->waktu_kembali_booking
-            ? $this->waktu_kembali_booking->translatedFormat('d M Y') . ' (Maks. ' . $this->waktu_kembali_booking->format('H:i') . ')'
+            ? $this->waktu_kembali_booking->translatedFormat('d M Y').' (Maks. '.$this->waktu_kembali_booking->format('H:i').')'
             : '27 Okt 2025 (Maks. 18:00)';
     }
 
     public function getFormattedTotalAttribute(): string
     {
-        return 'Rp ' . number_format((float) ($this->total_harga ?? 0), 0, ',', '.');
+        return 'Rp '.number_format((float) ($this->total_harga ?? 0), 0, ',', '.');
     }
 
     public function getGearImageAttribute(): string

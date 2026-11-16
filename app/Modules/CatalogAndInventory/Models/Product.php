@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Product extends Model
 {
     protected $table = 'produks';
+
     protected $primaryKey = 'id_produk';
 
     protected $fillable = [
@@ -96,7 +97,7 @@ class Product extends Model
      */
     public function getFormattedPriceAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->harga_sewa, 0, ',', '.') . ' / hari';
+        return 'Rp '.number_format((float) $this->harga_sewa, 0, ',', '.').' / hari';
     }
 
     /**

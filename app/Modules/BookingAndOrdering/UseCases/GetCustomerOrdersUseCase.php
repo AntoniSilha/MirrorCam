@@ -3,7 +3,9 @@
 namespace App\Modules\BookingAndOrdering\UseCases;
 
 use App\Models\Booking;
+use App\Models\DetailPemesananTenant;
 use App\Models\User;
+use App\Models\VerifikasiKtp;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
@@ -70,11 +72,17 @@ class GetCustomerOrdersUseCase
         // Apply sorting
         $sorted = $sort === 'terlama'
             ? $filtered->sortBy(function ($item) {
-                if (is_array($item)) return $item['id'] ?? 0;
+                if (is_array($item)) {
+                    return $item['id'] ?? 0;
+                }
+
                 return $item->waktu_ambil_booking ? strtotime((string) $item->waktu_ambil_booking) : ($item->id_pemesanan ?? $item->id ?? 0);
             })->values()
             : $filtered->sortByDesc(function ($item) {
-                if (is_array($item)) return $item['id'] ?? 0;
+                if (is_array($item)) {
+                    return $item['id'] ?? 0;
+                }
+
                 return $item->waktu_ambil_booking ? strtotime((string) $item->waktu_ambil_booking) : ($item->id_pemesanan ?? $item->id ?? 0);
             })->values();
 
@@ -92,9 +100,9 @@ class GetCustomerOrdersUseCase
     protected function retrieveOrders(User $user): Collection
     {
         if (Schema::hasTable('detail_pemesanan_tenants')) {
-            $ktpIds = \App\Models\VerifikasiKtp::where('id_akun', $user->id_akun)->pluck('id_ktp');
+            $ktpIds = VerifikasiKtp::where('id_akun', $user->id_akun)->pluck('id_ktp');
 
-            $dbOrders = \App\Models\DetailPemesananTenant::with(['tenant', 'produk.galeri'])
+            $dbOrders = DetailPemesananTenant::with(['tenant', 'produk.galeri'])
                 ->whereIn('id_ktp', $ktpIds)
                 ->get();
 
@@ -103,7 +111,7 @@ class GetCustomerOrdersUseCase
             }
 
             // Fallback to all orders in database if this user doesn't have an order yet
-            $allDbOrders = \App\Models\DetailPemesananTenant::with(['tenant', 'produk.galeri'])->get();
+            $allDbOrders = DetailPemesananTenant::with(['tenant', 'produk.galeri'])->get();
             if ($allDbOrders->isNotEmpty()) {
                 return $allDbOrders;
             }

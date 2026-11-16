@@ -4,7 +4,6 @@ namespace App\Portals\Customer\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 
 class TenantSummaryResource extends JsonResource
 {
@@ -60,7 +59,7 @@ class TenantSummaryResource extends JsonResource
         // Derive initials for logo fallback
         $words = explode(' ', trim($name));
         $initials = count($words) >= 2
-            ? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
+            ? strtoupper(substr($words[0], 0, 1).substr($words[1], 0, 1))
             : strtoupper(substr($name, 0, 2));
 
         return [

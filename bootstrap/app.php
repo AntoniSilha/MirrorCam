@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserIsCustomer;
 use App\Http\Middleware\EnsureUserIsMitra;
+use App\Http\Middleware\EnsureUserIsSuperAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role.user' => EnsureUserIsCustomer::class,
             'role.mitra' => EnsureUserIsMitra::class,
+            'role.superadmin' => EnsureUserIsSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

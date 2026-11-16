@@ -29,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Tenant extends Model
 {
     protected $table = 'tenants';
+
     protected $primaryKey = 'id_tenant';
 
     protected $fillable = [
@@ -82,6 +83,7 @@ class Tenant extends Model
         // Extract from alamat_toko if available
         if (! empty($this->alamat_toko)) {
             $parts = explode(',', $this->alamat_toko);
+
             return trim(end($parts));
         }
 

@@ -41,16 +41,16 @@ return [
     ],
 
     'tesseract' => [
-    'path' => env('TESSERACT_PATH', '/usr/bin/tesseract'),
+        'path' => env('TESSERACT_PATH', '/usr/bin/tesseract'),
 
-    'tessdata_dir' => env(
-        'TESSERACT_TESSDATA_DIR',
-        null
-    ),
+        'tessdata_dir' => env(
+            'TESSERACT_TESSDATA_DIR',
+            null
+        ),
 
-    'nik_threshold' => (float) env(
-        'TESSERACT_NIK_THRESHOLD',
-        70
-    ),
+        'nik_threshold' => (float) env(
+            'TESSERACT_NIK_THRESHOLD',
+            70
+        ),
     ],
 ];

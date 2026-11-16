@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\MitraRegisterController;
 use App\Http\Controllers\PengaduanPelangganController;
+use App\Http\Controllers\SuperAdmin\DashboardController;
+use App\Http\Controllers\SuperAdmin\KomisiPlatformController;
+use App\Http\Controllers\SuperAdmin\TenantManagementController;
 use App\Http\Controllers\TenantController;
 use App\Models\User;
 use App\Modules\Authentication\Controllers\GoogleRegistrationController;
@@ -42,6 +45,27 @@ Route::post('/complete-profile', [GoogleRegistrationController::class, 'storeDat
 require __DIR__.'/customer.php';
 require __DIR__.'/mitra.php';
 
+// Route SuperAdmin Platform (SRS UC-19, UC-23, UC-24, UC-25)
+Route::middleware(['auth', 'role.superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
+    Route::redirect('/', '/superadmin/dashboard');
+
+    // Halaman 1: Ringkasan & Dashboard + Pusat Aduan
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/pengaduan/{id}/resolve', [DashboardController::class, 'resolveComplaint'])->name('pengaduan.resolve');
+
+    // Halaman 2: Manajemen Tenant Mitra
+    Route::get('/tenant/export', [TenantManagementController::class, 'export'])->name('tenant.export');
+    Route::get('/tenant', [TenantManagementController::class, 'index'])->name('tenant.index');
+    Route::post('/tenant', [TenantManagementController::class, 'store'])->name('tenant.store');
+    Route::post('/tenant/{id}/approve', [TenantManagementController::class, 'approve'])->name('tenant.approve');
+    Route::post('/tenant/{id}/suspend', [TenantManagementController::class, 'suspend'])->name('tenant.suspend');
+
+    // Halaman 3: Rekapitulasi Komisi Platform
+    Route::get('/komisi/export', [KomisiPlatformController::class, 'export'])->name('komisi.export');
+    Route::get('/komisi', [KomisiPlatformController::class, 'index'])->name('komisi.index');
+    Route::post('/komisi/{id}/verify', [KomisiPlatformController::class, 'verify'])->name('komisi.verify');
+});
+
 // Route Fitur Registrasi Mitra
 Route::middleware(['auth'])->group(function () {
     Route::get('/register-mitra', [MitraRegisterController::class, 'create'])->name('register.mitra');
@@ -59,4 +83,25 @@ if (app()->environment('local')) {
 
         return 'Tidak ada akun user di database.';
     })->name('dev.login');
+
+    Route::get('/dev-login-superadmin', function () {
+        $user = User::where('role', 'superadmin')->first();
+        if (! $user) {
+            $user = User::first();
+            if ($user) {
+                $user->update(['role' => 'superadmin']);
+            } else {
+                $user = User::create([
+                    'id_user_google' => 'google-superadmin-dev',
+                    'role' => 'superadmin',
+                    'nama_lengkap_ktp' => 'MirrorCam Admin',
+                    'nik_ktp' => '3271234567890001',
+                    'no_whatsapp' => '081234567890',
+                ]);
+            }
+        }
+        Auth::login($user);
+
+        return redirect()->route('superadmin.dashboard')->with('status', 'Berhasil login sebagai SuperAdmin untuk testing.');
+    })->name('dev.login.superadmin');
 }

@@ -4,6 +4,7 @@ namespace App\Http\Requests\PengaduanPelanggan;
 
 use App\Models\DetailPemesananTenant;
 use App\Models\VerifikasiKtp;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePengaduanPelangganRequest extends FormRequest
@@ -55,7 +56,7 @@ class StorePengaduanPelangganRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -93,6 +94,7 @@ class StorePengaduanPelangganRequest extends FormRequest
 
                 if (! $booking) {
                     $validator->errors()->add('nomor_booking', 'Nomor Booking / Kode Invoice tidak ditemukan di sistem MirrorCam.');
+
                     return;
                 }
 
@@ -100,6 +102,7 @@ class StorePengaduanPelangganRequest extends FormRequest
                 $userKtpIds = VerifikasiKtp::where('id_akun', $user->id_akun)->pluck('id_ktp');
                 if ($userKtpIds->isNotEmpty() && ! $userKtpIds->contains($booking->id_ktp)) {
                     $validator->errors()->add('nomor_booking', 'Nomor Booking / Kode Invoice tersebut bukan milik akun Anda.');
+
                     return;
                 }
 
@@ -135,4 +138,3 @@ class StorePengaduanPelangganRequest extends FormRequest
         ];
     }
 }
-

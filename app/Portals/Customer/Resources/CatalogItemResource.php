@@ -41,8 +41,8 @@ class CatalogItemResource extends JsonResource
             : ($this->resource['price_unit'] ?? 'hari');
 
         $formattedPrice = $isModel
-            ? ($this->resource->formatted_price ?? ('Rp ' . number_format($price, 0, ',', '.') . ' / ' . $priceUnit))
-            : ($this->resource['formatted_price'] ?? ('Rp ' . number_format($price, 0, ',', '.') . ' / ' . $priceUnit));
+            ? ($this->resource->formatted_price ?? ('Rp '.number_format($price, 0, ',', '.').' / '.$priceUnit))
+            : ($this->resource['formatted_price'] ?? ('Rp '.number_format($price, 0, ',', '.').' / '.$priceUnit));
 
         $image = $isModel
             ? ($this->resource->primary_image ?? $this->resource->thumbnail_url ?? '/images/gear/placeholder.jpg')
@@ -73,7 +73,7 @@ class CatalogItemResource extends JsonResource
             'formatted_price' => $formattedPrice,
             'rating' => number_format($rating, 1, '.', ''),
             'review_count' => $reviews,
-            'rating_text' => number_format($rating, 1, '.', '') . " ({$reviews} ulasan)",
+            'rating_text' => number_format($rating, 1, '.', '')." ({$reviews} ulasan)",
             'stock' => $stock,
             'is_available' => $isAvailable,
             'status_label' => $isAvailable ? 'Tersedia' : 'Habis Disewa',

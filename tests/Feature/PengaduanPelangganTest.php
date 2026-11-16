@@ -16,10 +16,10 @@ uses(RefreshDatabase::class);
 
 function createTestCustomer(string $name = 'Budi Santoso'): User
 {
-    $googleId = 'google-' . uniqid();
+    $googleId = 'google-'.uniqid();
     AccountGoogle::create([
         'id_user_google' => $googleId,
-        'email' => strtolower(str_replace(' ', '.', $name)) . '-' . uniqid() . '@example.com',
+        'email' => strtolower(str_replace(' ', '.', $name)).'-'.uniqid().'@example.com',
     ]);
 
     $user = User::create([
@@ -43,7 +43,7 @@ function createTestCustomer(string $name = 'Budi Santoso'): User
 
 function createTestTenant(string $shopName = 'Indo Project'): Tenant
 {
-    $owner = createTestCustomer('Owner ' . $shopName);
+    $owner = createTestCustomer('Owner '.$shopName);
     $owner->update(['role' => 'mitra']);
 
     return Tenant::create([
@@ -71,7 +71,7 @@ function createTestBooking(User $customer, Tenant $tenant, string $productName =
         'id_tenant' => $tenant->id_tenant,
         'id_kategori' => $category->id_kategori,
         'nama_produk' => $productName,
-        'deskripsi_lengkap' => 'Deskripsi ' . $productName,
+        'deskripsi_lengkap' => 'Deskripsi '.$productName,
         'harga_sewa' => 550000,
         'total_stock_unit' => 2,
     ]);
@@ -79,7 +79,7 @@ function createTestBooking(User $customer, Tenant $tenant, string $productName =
     $ktp = VerifikasiKtp::where('id_akun', $customer->id_akun)->first();
 
     return DetailPemesananTenant::create([
-        'sub_order_eksternal' => 'INV-2026-MC' . random_int(100, 999),
+        'sub_order_eksternal' => 'INV-2026-MC'.random_int(100, 999),
         'id_tenant' => $tenant->id_tenant,
         'id_produk' => $product->id_produk,
         'id_ktp' => $ktp->id_ktp,

@@ -40,10 +40,10 @@ class SearchCatalogUseCase
             if (! empty($keyword)) {
                 $query->where(function ($q) use ($keyword) {
                     $q->where('nama_produk', 'like', "%{$keyword}%")
-                      ->orWhere('deskripsi_lengkap', 'like', "%{$keyword}%")
-                      ->orWhereHas('tenant', function ($tq) use ($keyword) {
-                          $tq->where('nama_toko', 'like', "%{$keyword}%");
-                      });
+                        ->orWhere('deskripsi_lengkap', 'like', "%{$keyword}%")
+                        ->orWhereHas('tenant', function ($tq) use ($keyword) {
+                            $tq->where('nama_toko', 'like', "%{$keyword}%");
+                        });
                 });
             }
 

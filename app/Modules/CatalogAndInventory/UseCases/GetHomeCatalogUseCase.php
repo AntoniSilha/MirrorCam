@@ -53,7 +53,7 @@ class GetHomeCatalogUseCase
             return Tenant::withCount('products')
                 ->where(function ($q) {
                     $q->where('status_mitra', 'aktif')
-                      ->orWhere('status_mitra', 'official');
+                        ->orWhere('status_mitra', 'official');
                 })
                 ->get();
         }
