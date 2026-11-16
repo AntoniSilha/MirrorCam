@@ -16,11 +16,11 @@ class ProductCatalogController extends Controller
         // Daftar wilayah hub utama
         $wilayahList = [
             'Jakarta Selatan' => 'Jakarta Selatan & Sekitarnya',
-            'Jakarta Barat'   => 'Jakarta Barat & Pusat',
-            'Bandung'         => 'Bandung & Sekitarnya',
-            'Surabaya'        => 'Surabaya & Malang',
-            'Bali'            => 'Bali (Denpasar, Canggu, Ubud)',
-            'Yogyakarta'      => 'D.I. Yogyakarta',
+            'Jakarta Barat' => 'Jakarta Barat & Pusat',
+            'Bandung' => 'Bandung & Sekitarnya',
+            'Surabaya' => 'Surabaya & Malang',
+            'Bali' => 'Bali (Denpasar, Canggu, Ubud)',
+            'Yogyakarta' => 'D.I. Yogyakarta',
         ];
 
         // Hitung jumlah produk riil pada masing-masing wilayah hub
@@ -32,28 +32,30 @@ class ProductCatalogController extends Controller
         }
 
         $totalSemuaWilayah = Produk::count();
-        $totalMitraAktif = Tenant::where('status_mitra', 'terverifikasi')->count() ?: Tenant::count();
+        $totalMitraAktif = Tenant::where('status_mitra', 'verified')->count();
 
         // Daftar kategori beserta jumlah produk aktif
         $kategoris = KategoriProduk::withCount('produks')->get();
 
         // Query produk lintas tenant
-        $query = Produk::with(['tenant', 'galeri', 'kategori']);
+        $query = Produk::with(['tenant', 'galeri', 'kategori'])
+            ->withAvg('reviews as avg_rating', 'rating_nilai')
+            ->withCount(['reviews', 'pemesanans']);
 
         // 1. Pencarian nama produk atau nama tenant
         if ($request->filled('q')) {
             $search = trim($request->q);
             $query->where(function ($q) use ($search) {
                 $q->where('nama_produk', 'like', "%{$search}%")
-                  ->orWhere('deskripsi_lengkap', 'like', "%{$search}%")
-                  ->orWhereHas('tenant', fn($t) => $t->where('nama_toko', 'like', "%{$search}%"));
+                    ->orWhere('deskripsi_lengkap', 'like', "%{$search}%")
+                    ->orWhereHas('tenant', fn ($t) => $t->where('nama_toko', 'like', "%{$search}%"));
             });
         }
 
         // 2. Filter Lokasi & Hub Tenant
         if ($request->filled('lokasi') && is_array($request->lokasi)) {
             $lokasis = array_filter($request->lokasi);
-            if (!empty($lokasis)) {
+            if (! empty($lokasis)) {
                 $query->whereHas('tenant', function ($q) use ($lokasis) {
                     $q->where(function ($sub) use ($lokasis) {
                         foreach ($lokasis as $wil) {
@@ -68,10 +70,10 @@ class ProductCatalogController extends Controller
         if ($request->filled('harga_preset')) {
             match ($request->harga_preset) {
                 'under_300k' => $query->where('harga_sewa', '<', 300000),
-                '300k_1m'    => $query->whereBetween('harga_sewa', [300000, 1000000]),
-                '1m_3m'      => $query->whereBetween('harga_sewa', [1000000, 3000000]),
-                'above_3m'   => $query->where('harga_sewa', '>', 3000000),
-                default      => null,
+                '300k_1m' => $query->whereBetween('harga_sewa', [300000, 1000000]),
+                '1m_3m' => $query->whereBetween('harga_sewa', [1000000, 3000000]),
+                'above_3m' => $query->where('harga_sewa', '>', 3000000),
+                default => null,
             };
         } else {
             if ($request->filled('min_harga')) {
@@ -91,7 +93,7 @@ class ProductCatalogController extends Controller
         // 4. Filter Kategori Peralatan
         if ($request->filled('kategori') && is_array($request->kategori)) {
             $kats = array_filter($request->kategori);
-            if (!empty($kats)) {
+            if (! empty($kats)) {
                 $query->whereIn('id_kategori', $kats);
             }
         }
@@ -100,8 +102,8 @@ class ProductCatalogController extends Controller
         match ($request->get('sort', 'populer')) {
             'termurah' => $query->orderBy('harga_sewa', 'asc'),
             'termahal' => $query->orderBy('harga_sewa', 'desc'),
-            'terbaru'  => $query->orderBy('created_at', 'desc'),
-            default    => $query->orderBy('id_produk', 'asc'),
+            'terbaru' => $query->orderBy('created_at', 'desc'),
+            default => $query->orderBy('id_produk', 'asc'),
         };
 
         $produks = $query->paginate(12)->withQueryString();

@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Schema;
 class TenantDirectoryService
 {
     /**
-     * Get active tenants with eager loading to prevent N+1 queries.
-     * Only retrieves tenants with status 'aktif' per SRS UC-02 & UC-23.
+     * Get verified tenants with eager loading to prevent N+1 queries.
+     * Only retrieves tenants with status 'verified' per SRS UC-02 & UC-23.
      *
      * @param array{
      *     search?: ?string,
@@ -39,10 +39,7 @@ class TenantDirectoryService
             : 'total_stock_unit';
 
         $baseQuery = Tenant::query()
-            ->where(function (Builder $q) {
-                $q->where('status_mitra', 'aktif')
-                    ->orWhere('status_mitra', 'Aktif');
-            })
+            ->where('status_mitra', 'verified')
             ->with([
                 'detailOperasional',
                 'produks.kategori',
@@ -113,10 +110,7 @@ class TenantDirectoryService
             : 'total_stock_unit';
 
         $tenants = Tenant::query()
-            ->where(function (Builder $q) {
-                $q->where('status_mitra', 'aktif')
-                    ->orWhere('status_mitra', 'Aktif');
-            })
+            ->where('status_mitra', 'verified')
             ->with([
                 'detailOperasional',
                 'produks.kategori',

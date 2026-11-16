@@ -1,14 +1,15 @@
 <?php
 
-use App\Http\Controllers\MitraRegisterController;
-use App\Http\Controllers\PengaduanPelangganController;
-use App\Http\Controllers\TenantController;
 use App\Models\User;
 use App\Modules\Authentication\Controllers\GoogleRegistrationController;
+use App\Modules\TenantManagement\Controllers\MitraRegisterController;
 use App\Portals\Customer\Controllers\BookingCartController;
 use App\Portals\Customer\Controllers\HomeController;
+use App\Portals\Customer\Controllers\PengaduanPelangganController;
 use App\Portals\Customer\Controllers\ProductCatalogController;
 use App\Portals\Customer\Controllers\TenantCatalogController;
+use App\Portals\Customer\Controllers\TenantController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // use Laravel\Mcp\Request;
@@ -35,7 +36,7 @@ Route::get('/produk/{id}', [BookingCartController::class, 'showProduct'])->name(
 // Route Terproteksi Customer (Wajib Login)
 Route::middleware(['auth', 'role.user'])->group(function () {
     Route::livewire('/dashboard', 'pages::customer.dashboard')->name('dashboard');
-    Route::resource('pengaduan', \App\Http\Controllers\PengaduanPelangganController::class)->only(['index', 'create', 'store', 'show']);
+    Route::resource('pengaduan', PengaduanPelangganController::class)->only(['index', 'create', 'store', 'show']);
 
     // Halaman Keranjang Sewa Multi-Tenant & Checkout
     Route::get('/keranjang', [BookingCartController::class, 'cartIndex'])->name('keranjang.index');

@@ -41,6 +41,14 @@ class Tenant extends Model
     }
 
     /**
+     * Relationship: Bookings made at this tenant
+     */
+    public function pemesanans(): HasMany
+    {
+        return $this->hasMany(DetailPemesananTenant::class, 'id_tenant', 'id_tenant');
+    }
+
+    /**
      * Relationship: Owner user account
      */
     public function pemilik(): BelongsTo
@@ -116,9 +124,7 @@ class Tenant extends Model
      */
     public function getIsOfficialAttribute(): bool
     {
-        $status = strtolower($this->status_mitra ?? '');
-
-        return $status === 'aktif' || $status === 'official';
+        return strtolower($this->status_mitra ?? '') === 'verified';
     }
 
     /**
@@ -126,8 +132,12 @@ class Tenant extends Model
      */
     public function getFormattedRatingAttribute(): string
     {
-        if (isset($this->attributes['avg_rating']) && $this->attributes['avg_rating'] !== null) {
-            return number_format((float) $this->attributes['avg_rating'], 1, '.', '');
+        $average = $this->attributes['avg_rating']
+            ?? $this->attributes['reviews_avg_rating_nilai']
+            ?? null;
+
+        if ($average !== null) {
+            return number_format((float) $average, 1, '.', '');
         }
 
         if ($this->relationLoaded('reviews') && $this->reviews->isNotEmpty()) {
@@ -182,19 +192,14 @@ class Tenant extends Model
     {
         if ($field === 'slug' || $field === null) {
             if (is_numeric($value)) {
-                $tenant = $this->newQuery()
-                    ->whereIn('status_mitra', ['aktif', 'Aktif'])
-                    ->where('id_tenant', $value)
-                    ->first();
+                $tenant = $this->newQuery()->where('id_tenant', $value)->first();
 
                 if ($tenant) {
                     return $tenant;
                 }
             }
 
-            $tenants = $this->newQuery()
-                ->whereIn('status_mitra', ['aktif', 'Aktif'])
-                ->get();
+            $tenants = $this->newQuery()->get();
 
             $matched = $tenants->first(function ($t) use ($value) {
                 return $t->slug === $value || (string) $t->id_tenant === (string) $value;
@@ -204,7 +209,7 @@ class Tenant extends Model
                 return $matched;
             }
 
-            abort(404, 'Tenant tidak ditemukan atau sedang tidak aktif.');
+            abort(404, 'Tenant tidak ditemukan.');
         }
 
         return parent::resolveRouteBinding($value, $field);

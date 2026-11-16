@@ -13,9 +13,12 @@ class TenantCatalogController extends Controller
 {
     public function show(Request $request, $id = 1)
     {
-        $tenant = Tenant::find($id) ?? Tenant::first();
+        $tenant = Tenant::with('detailOperasional')
+            ->withAvg('reviews as avg_rating', 'rating_nilai')
+            ->withCount(['reviews', 'pemesanans'])
+            ->find($id) ?? Tenant::first();
 
-        if (!$tenant) {
+        if (! $tenant) {
             abort(404, 'Data tenant di tabel tenants masih kosong.');
         }
 
@@ -25,13 +28,15 @@ class TenantCatalogController extends Controller
         $kategoriTabs = KategoriProduk::withCount([
             'produks as total' => function ($query) use ($id) {
                 $query->where('id_tenant', $id);
-            }
+            },
         ])->get();
 
         $totalSemuaAlat = Produk::where('id_tenant', $id)->count();
 
         // Ambil daftar produk milik tenant + relasi foto galeri & kategori
         $query = Produk::with(['galeri', 'kategori'])
+            ->withAvg('reviews as avg_rating', 'rating_nilai')
+            ->withCount(['reviews', 'pemesanans'])
             ->where('id_tenant', $id);
 
         if ($request->filled('kategori')) {
@@ -39,7 +44,7 @@ class TenantCatalogController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('nama_produk', 'like', '%' . $request->search . '%');
+            $query->where('nama_produk', 'like', '%'.$request->search.'%');
         }
 
         if ($request->boolean('siap_pakai')) {
@@ -49,7 +54,7 @@ class TenantCatalogController extends Controller
         match ($request->get('sort', 'terpopuler')) {
             'termurah' => $query->orderBy('harga_sewa', 'asc'),
             'termahal' => $query->orderBy('harga_sewa', 'desc'),
-            default    => $query->orderBy('id_produk', 'asc'),
+            default => $query->orderBy('id_produk', 'asc'),
         };
 
         $produks = $query->paginate(8)->withQueryString();

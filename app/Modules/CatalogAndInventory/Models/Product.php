@@ -2,11 +2,14 @@
 
 namespace App\Modules\CatalogAndInventory\Models;
 
+use App\Models\DetailPemesananTenant;
 use App\Models\GaleriFotoProduk;
+use App\Models\ReviewUlasanTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 /**
  * @property int $id_produk
@@ -28,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Product extends Model
 {
     protected $table = 'produks';
+
     protected $primaryKey = 'id_produk';
 
     protected $fillable = [
@@ -81,6 +85,33 @@ class Product extends Model
     }
 
     /**
+     * Bookings that include this product.
+     *
+     * @return HasMany<DetailPemesananTenant, $this>
+     */
+    public function pemesanans(): HasMany
+    {
+        return $this->hasMany(DetailPemesananTenant::class, 'id_produk', 'id_produk');
+    }
+
+    /**
+     * Reviews submitted for bookings of this product.
+     *
+     * @return HasManyThrough<ReviewUlasanTenant, DetailPemesananTenant, $this>
+     */
+    public function reviews(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            ReviewUlasanTenant::class,
+            DetailPemesananTenant::class,
+            'id_produk',
+            'id_pemesanan',
+            'id_produk',
+            'id_pemesanan'
+        );
+    }
+
+    /**
      * Scope for products with stock
      *
      * @param  Builder<Product>  $query
@@ -96,7 +127,7 @@ class Product extends Model
      */
     public function getFormattedPriceAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->harga_sewa, 0, ',', '.') . ' / hari';
+        return 'Rp '.number_format((float) $this->harga_sewa, 0, ',', '.').' / hari';
     }
 
     /**
@@ -120,7 +151,15 @@ class Product extends Model
      */
     public function getRatingDisplayAttribute(): string
     {
-        return number_format((float) ($this->rating ?? 4.9), 1, '.', '');
+        $average = $this->attributes['avg_rating']
+            ?? $this->attributes['reviews_avg_rating_nilai']
+            ?? null;
+
+        if ($average === null && $this->relationLoaded('reviews')) {
+            $average = $this->reviews->avg('rating_nilai');
+        }
+
+        return number_format((float) ($average ?? 0), 1, '.', '');
     }
 
     /**
@@ -128,6 +167,15 @@ class Product extends Model
      */
     public function getReviewCountDisplayAttribute(): int
     {
-        return $this->review_count ?? 24;
+        return (int) ($this->reviews_count
+            ?? ($this->relationLoaded('reviews') ? $this->reviews->count() : 0));
+    }
+
+    /**
+     * Booking count display
+     */
+    public function getBookingCountDisplayAttribute(): int
+    {
+        return (int) ($this->pemesanans_count ?? 0);
     }
 }

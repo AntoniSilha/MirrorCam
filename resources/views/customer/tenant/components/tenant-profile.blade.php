@@ -25,21 +25,27 @@
                     {{-- map-pin --}}
                     <span class="flex items-center gap-1">
                         <svg class="{{ $svg }} text-black/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                        {{ $tenant->alamat ?? 'Kebayoran Baru, Jakarta Selatan' }}
+                        {{ $tenant->alamat_toko ?? $tenant->kota }}
                     </span>
 
                     {{-- star --}}
                     <span class="flex items-center gap-1 font-semibold text-[#000000]">
                         <svg class="{{ $svg }}" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        {{ number_format($tenant->rating ?? 4.9, 1) }}
-                        <span class="text-black/50 font-normal">({{ $tenant->total_rental ?? 420 }}+ Rental Sukses)</span>
+                        {{ $tenant->formatted_rating }}
+                        <span class="text-black/50 font-normal">({{ $tenant->pemesanans_count ?? 0 }}+ Rental Sukses)</span>
                     </span>
                 </div>
 
                 {{-- clock --}}
                 <div class="flex items-center gap-1.5 text-xs text-black/60 mt-1">
                     <svg class="{{ $svg }} text-black/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>{{ $tenant->jam_operasional ?? '08:00 - 22:00 WIB' }}</span>
+                    <span>
+                        @if ($tenant->detailOperasional)
+                            {{ substr($tenant->detailOperasional->jam_buka, 0, 5) }} - {{ substr($tenant->detailOperasional->jam_tutup, 0, 5) }} WIB
+                        @else
+                            Jam operasional belum diatur
+                        @endif
+                    </span>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2 mt-3.5">

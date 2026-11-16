@@ -19,7 +19,20 @@
     }
 
     $thumbPhotos = array_slice($photos, 0, 4);
-    $defaultColor = strtolower($produk->color_produk ?? 'black');
+    $availableColors = array_values(array_filter(array_map('trim', explode(',', (string) $produk->color_produk))));
+    $defaultColor = $availableColors[0] ?? 'Black';
+    $colorHex = [
+        'black' => '#111827', 'white' => '#ffffff', 'grey' => '#9ca3af', 'silver' => '#d1d5db',
+        'red' => '#ef4444', 'maroon' => '#7f1d1d', 'orange' => '#f97316', 'yellow' => '#facc15',
+        'gold' => '#d4af37', 'green' => '#22c55e', 'olive' => '#808000', 'teal' => '#14b8a6',
+        'cyan' => '#06b6d4', 'blue' => '#3b82f6', 'navy' => '#1e3a8a', 'purple' => '#8b5cf6',
+        'violet' => '#7c3aed', 'pink' => '#ec4899', 'brown' => '#92400e', 'beige' => '#d6c4a1',
+        'cream' => '#fff7d6', 'rose gold' => '#b76e79',
+    ];
+    $colorOptions = collect($availableColors)->map(fn ($name) => [
+        'name' => $name,
+        'hex' => $colorHex[strtolower($name)] ?? '#9ca3af',
+    ])->values();
 
     $durationCatalog = [
         '6_jam' => '6 Jam',
@@ -53,17 +66,17 @@
     }
 
     $defaultDurationCode = $defaultDuration['code'] ?? null;
+
+    $productRating = (float) ($produk->avg_rating ?? $produk->reviews_avg_rating_nilai ?? 0);
+    $productReviewCount = (int) ($produk->reviews_count ?? 0);
+    $filledStars = (int) round($productRating);
 @endphp
 
 <div x-data="{
         activeImage: @js($photos[0]),
         selectedColor: @js($defaultColor),
         selectedDuration: @js($defaultDurationCode),
-        colors: [
-            { name: 'black', hex: '#000000' },
-            { name: 'silver', hex: '#d9d9d9' },
-            { name: 'red', hex: '#ff0000' }
-        ],
+        colors: @js($colorOptions),
         durations: @js($durationOptions),
         get selectedDurationOption() {
             return this.durations.find(d => d.code === this.selectedDuration) || null;
@@ -154,13 +167,16 @@
 
             <div class="flex items-center gap-2 mt-2.5">
                 <div class="flex items-center gap-0.5">
-                    @for($s = 1; $s <= 4; $s++)
-                        <svg class="w-[18px] h-[18px] fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    @for($s = 1; $s <= 5; $s++)
+                        <svg class="w-[18px] h-[18px] {{ $s <= $filledStars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200' }}" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     @endfor
-                    <svg class="w-[18px] h-[18px] fill-gray-200 text-gray-200" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 </div>
                 <span class="text-xs text-black/50 font-medium">
-                    {{ 42 + ($produk->id_produk * 3) }} ulasan
+                    @if ($productReviewCount > 0)
+                        {{ $produk->formatted_rating }} &middot; {{ $productReviewCount }} ulasan
+                    @else
+                        Belum ada ulasan
+                    @endif
                 </span>
             </div>
 

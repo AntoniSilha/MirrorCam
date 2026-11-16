@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Portals\Customer\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\PengaduanPelanggan\StorePengaduanPelangganRequest;
 use App\Models\DetailPemesananTenant;
 use App\Models\PengaduanPelanggan;

@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\AccountGoogle;
+use App\Models\DetailPemesananTenant;
 use App\Models\DurasiProduk;
 use App\Models\KategoriProduk;
 use App\Models\Produk;
+use App\Models\ReviewUlasanTenant;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\VerifikasiKtp;
@@ -54,7 +56,7 @@ function bookingTestCreateProduct(): Produk
         'jabatan_penanggungjawab' => 'Head of Ops',
         'email_resmi' => 'booking-tenant@example.com',
         'alamat_toko' => 'Jl. Kamera No. 10, Jakarta',
-        'status_mitra' => 'aktif',
+        'status_mitra' => 'verified',
     ]);
 
     $category = KategoriProduk::create([
@@ -121,4 +123,65 @@ it('uses the configured duration price when adding to cart', function () {
     expect($cart)->toHaveCount(1)
         ->and(array_values($cart)[0]['harga'])->toBe(145000)
         ->and(array_values($cart)[0]['durasi_label'])->toBe('Durasi sewa: 12 Jam');
+});
+
+it('shows the real review rating and count on the product page', function () {
+    $produk = bookingTestCreateProduct();
+    $penyewa = bookingTestCreateUser();
+    $ktp = VerifikasiKtp::where('id_akun', $penyewa->id_akun)->firstOrFail();
+
+    $pemesanan = DetailPemesananTenant::create([
+        'sub_order_eksternal' => 'SUB-RATING-TEST',
+        'id_tenant' => $produk->id_tenant,
+        'id_produk' => $produk->id_produk,
+        'id_ktp' => $ktp->id_ktp,
+        'url_foto_ktp' => 'ktp/test.jpg',
+        'waktu_ambil_booking' => now(),
+        'waktu_kembali_booking' => now()->addDay(),
+        'durasi_sewa_hari' => 1,
+        'harga_sewa_booking' => 145000,
+        'total_harga' => 145000,
+        'status_sewa' => 'Selesai',
+    ]);
+
+    ReviewUlasanTenant::create([
+        'id_akun_penyewa' => $penyewa->id_akun,
+        'id_pemesanan' => $pemesanan->id_pemesanan,
+        'id_tenant' => $produk->id_tenant,
+        'rating_nilai' => 4,
+        'komentar_text' => 'Bagus',
+    ]);
+
+    ReviewUlasanTenant::create([
+        'id_akun_penyewa' => $penyewa->id_akun,
+        'id_pemesanan' => $pemesanan->id_pemesanan,
+        'id_tenant' => $produk->id_tenant,
+        'rating_nilai' => 5,
+        'komentar_text' => 'Sangat bagus',
+    ]);
+
+    $this->get(route('produk.show', $produk->id_produk))
+        ->assertOk()
+        ->assertSee('4.5')
+        ->assertSee('2 ulasan');
+});
+
+it('shows the real cart quantity in the navbar', function () {
+    $produk = bookingTestCreateProduct();
+
+    $this->withSession(['mirrorcam_cart' => [
+        'item-a' => ['id_produk' => $produk->id_produk, 'qty' => 1],
+        'item-b' => ['id_produk' => $produk->id_produk, 'qty' => 2],
+    ]])->get(route('home'))
+        ->assertOk()
+        ->assertSee('Keranjang Belanja (3 item)');
+});
+
+it('ignores cart entries whose product no longer exists', function () {
+    $this->withSession(['mirrorcam_cart' => [
+        'stale' => ['id_produk' => 999999, 'qty' => 3],
+    ]])->get(route('home'))
+        ->assertOk()
+        ->assertSee('Keranjang Belanja (0 item)')
+        ->assertSessionHas('mirrorcam_cart', []);
 });

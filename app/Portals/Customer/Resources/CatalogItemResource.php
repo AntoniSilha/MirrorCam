@@ -41,20 +41,24 @@ class CatalogItemResource extends JsonResource
             : ($this->resource['price_unit'] ?? 'hari');
 
         $formattedPrice = $isModel
-            ? ($this->resource->formatted_price ?? ('Rp ' . number_format($price, 0, ',', '.') . ' / ' . $priceUnit))
-            : ($this->resource['formatted_price'] ?? ('Rp ' . number_format($price, 0, ',', '.') . ' / ' . $priceUnit));
+            ? ($this->resource->formatted_price ?? ('Rp '.number_format($price, 0, ',', '.').' / '.$priceUnit))
+            : ($this->resource['formatted_price'] ?? ('Rp '.number_format($price, 0, ',', '.').' / '.$priceUnit));
 
         $image = $isModel
             ? ($this->resource->primary_image ?? $this->resource->thumbnail_url ?? '/images/gear/placeholder.jpg')
             : ($this->resource['image'] ?? $this->resource['thumbnail_url'] ?? '/images/gear/placeholder.jpg');
 
         $rating = $isModel
-            ? (float) ($this->resource->rating ?? 5.0)
-            : (float) ($this->resource['rating'] ?? 5.0);
+            ? (float) ($this->resource->avg_rating ?? $this->resource->reviews_avg_rating_nilai ?? 0.0)
+            : (float) ($this->resource['rating'] ?? 0.0);
 
         $reviews = $isModel
-            ? (int) ($this->resource->review_count ?? 0)
+            ? (int) ($this->resource->reviews_count ?? 0)
             : (int) ($this->resource['review_count'] ?? $this->resource['reviews'] ?? 0);
+
+        $bookingCount = $isModel
+            ? (int) ($this->resource->pemesanans_count ?? 0)
+            : (int) ($this->resource['booking_count'] ?? 0);
 
         $stock = $isModel
             ? (int) ($this->resource->total_stock_unit ?? 0)
@@ -73,7 +77,10 @@ class CatalogItemResource extends JsonResource
             'formatted_price' => $formattedPrice,
             'rating' => number_format($rating, 1, '.', ''),
             'review_count' => $reviews,
-            'rating_text' => number_format($rating, 1, '.', '') . " ({$reviews} ulasan)",
+            'booking_count' => $bookingCount,
+            'rating_text' => $reviews > 0
+                ? number_format($rating, 1, '.', '')." ({$reviews} ulasan)"
+                : 'Belum ada ulasan',
             'stock' => $stock,
             'is_available' => $isAvailable,
             'status_label' => $isAvailable ? 'Tersedia' : 'Habis Disewa',

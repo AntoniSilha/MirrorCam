@@ -100,6 +100,7 @@ class GetTenantDashboardMetricsUseCase
         [$chartLabels, $chartValues] = $this->chartData($bookings, $netByBooking);
 
         $productRows = $products->map(fn (Produk $product) => [
+            'id' => $product->id_produk,
             'nama' => $product->nama_produk,
             'foto' => $product->primary_image,
             'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
@@ -307,7 +308,7 @@ class GetTenantDashboardMetricsUseCase
             'email' => $tenant->email_resmi ?: '-',
             'whatsapp' => $tenant->whatsapp_resmi ?: '-',
             'alamat' => $tenant->alamat_toko ?: '-',
-            'status' => $tenant->status_mitra ?: 'Menunggu Verifikasi',
+            'status' => $tenant->status_mitra === 'verified' ? 'Terverifikasi' : 'Belum Terverifikasi',
             'logo' => $tenant->url_logo,
             'inisial' => $this->initials($name),
         ];

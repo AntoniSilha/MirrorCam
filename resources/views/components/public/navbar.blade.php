@@ -45,7 +45,7 @@
 
             <!-- Header Actions / Auth (Right side) -->
             <div class="flex items-center gap-4 shrink-0">
-                @php($cartCount = collect(session('mirrorcam_cart', []))->count())
+                @php($cartCount = app(\App\Services\CartService::class)->count())
                 <!-- Shopping Bag / Cart Icon with Cart Item Count -->
                 <a href="{{ route('keranjang.index') }}" class="relative p-1 text-[#000000] hover:opacity-80 transition" title="Keranjang Belanja" aria-label="Keranjang Belanja ({{ $cartCount }} item)">
                     <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[#000000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

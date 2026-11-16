@@ -4,7 +4,6 @@ namespace App\Portals\Customer\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 
 class TenantSummaryResource extends JsonResource
 {
@@ -38,8 +37,11 @@ class TenantSummaryResource extends JsonResource
             : ($this->resource['bio_deskripsi'] ?? $this->resource['bio'] ?? '');
 
         $rating = $isModel
-            ? (float) ($this->resource->rating ?? 5.0)
-            : (float) ($this->resource['rating'] ?? 5.0);
+            ? ($this->resource->reviews_avg_rating_nilai ?? null)
+            : ($this->resource['reviews_avg_rating_nilai'] ?? $this->resource['rating'] ?? null);
+        $reviewCount = $isModel
+            ? (int) ($this->resource->reviews_count ?? 0)
+            : (int) ($this->resource['reviews_count'] ?? 0);
 
         $unitReady = $isModel
             ? (int) ($this->resource->products_count ?? $this->resource->unit_ready ?? 0)
@@ -49,18 +51,17 @@ class TenantSummaryResource extends JsonResource
             ? ($this->resource->kota ?? $this->resource->location ?? 'Indonesia')
             : ($this->resource['kota'] ?? $this->resource['location'] ?? 'Indonesia');
 
-        $badge = $isModel
-            ? ($this->resource->badge_text ?? 'OFFICIAL PARTNER')
-            : ($this->resource['badge_text'] ?? 'OFFICIAL PARTNER');
+        $statusMitra = $isModel
+            ? strtolower((string) ($this->resource->status_mitra ?? ''))
+            : strtolower((string) ($this->resource['status_mitra'] ?? ''));
+        $isOfficial = $statusMitra === 'verified';
 
-        $isOfficial = $isModel
-            ? ($this->resource->is_official ?? true)
-            : ($this->resource['is_official'] ?? true);
+        $badge = $isOfficial ? 'OFFICIAL PARTNER' : 'BELUM TERVERIFIKASI';
 
         // Derive initials for logo fallback
         $words = explode(' ', trim($name));
         $initials = count($words) >= 2
-            ? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
+            ? strtoupper(substr($words[0], 0, 1).substr($words[1], 0, 1))
             : strtoupper(substr($name, 0, 2));
 
         return [
@@ -70,7 +71,8 @@ class TenantSummaryResource extends JsonResource
             'logo' => $logo,
             'initials' => $initials,
             'bio' => $bio,
-            'rating' => number_format($rating, 1, '.', ''),
+            'rating' => $reviewCount > 0 && $rating !== null ? number_format((float) $rating, 1, '.', '') : null,
+            'review_count' => $reviewCount,
             'unit_ready' => $unitReady,
             'unit_ready_text' => "{$unitReady} Unit Ready",
             'location' => $location,

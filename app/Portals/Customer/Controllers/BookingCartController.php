@@ -11,7 +11,10 @@ class BookingCartController extends Controller
 {
     public function showProduct($id)
     {
-        $produk = Produk::with(['tenant', 'galeri', 'kategori', 'durasi'])->findOrFail($id);
+        $produk = Produk::with(['tenant', 'galeri', 'kategori', 'durasi'])
+            ->withAvg('reviews as avg_rating', 'rating_nilai')
+            ->withCount(['reviews', 'pemesanans'])
+            ->findOrFail($id);
 
         $user = Auth::user();
 

@@ -46,8 +46,13 @@
             <!-- Rating & Frekuensi Sewa -->
             <div class="flex items-center gap-1 text-[11px] text-black/60 mt-1">
                 <svg class="w-3 h-3 fill-[#000000] text-[#000000] shrink-0" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <span class="font-semibold text-[#000000]">4.9</span>
-                <span>({{ 40 + ($produk->id_produk * 17) }} kali disewa)</span>
+                @if (($produk->reviews_count ?? 0) > 0)
+                    <span class="font-semibold text-[#000000]">{{ $produk->formatted_rating }}</span>
+                    <span>({{ $produk->reviews_count }} ulasan)</span>
+                @else
+                    <span>Belum ada ulasan</span>
+                @endif
+                <span class="text-black/40">&middot; {{ $produk->booking_count }}&times; disewa</span>
             </div>
 
             @if(($produk->total_stock_unit ?? 0) <= 2 && ($produk->total_stock_unit ?? 0) > 0)

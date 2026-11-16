@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\TenantManagement\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterMitraRequest;
 use App\Models\DetailOperasionalTenant;
 use App\Models\RekeningSettlementTenant;
@@ -71,7 +72,7 @@ class MitraRegisterController extends Controller
                     'jabatan_penanggungjawab' => $validated['jabatan_pengelola'],
                     'email_resmi' => $user->email,
                     'alamat_toko' => $validated['alamat_lengkap'].', '.$validated['kota_operasional'],
-                    'status_mitra' => 'Menunggu Verifikasi',
+                    'status_mitra' => 'noverified',
                 ]);
 
                 DetailOperasionalTenant::query()->create([

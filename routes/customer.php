@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\PengaduanPelangganController;
+use App\Portals\Customer\Controllers\PengaduanPelangganController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role.user'])->prefix('customer')->name('customer.')->group(function () {
