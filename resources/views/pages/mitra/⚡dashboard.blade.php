@@ -1,18 +1,27 @@
 <?php
 
+use App\Models\DurasiProduk;
+use App\Models\GaleriFotoProduk;
 use App\Models\KategoriProduk;
 use App\Models\Produk;
 use App\Models\Tenant;
 use App\Modules\TenantManagement\UseCases\GetTenantDashboardMetricsUseCase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')] class extends Component {
+new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')] class extends Component
+{
+    use WithFileUploads;
+
     public string $section = 'ringkasan';
 
     public bool $sidebarOpen = false;
@@ -33,6 +42,22 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
     public string $deskripsi_lengkap = '';
 
+    /** @var array<int, string> */
+    public array $color_produk = [];
+
+    /** @var array<int, string> */
+    public array $durasi_terpilih = ['1_hari'];
+
+    /** @var array<string, string> */
+    public array $harga_durasi = [];
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $fotos = [];
+
+    public string $productSearch = '';
+
+    public string $bookingSearch = '';
+
     public function mount(): void
     {
         $this->autoAcceptBooking = (bool) session('mitra.auto_accept_booking', true);
@@ -45,7 +70,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        return app(GetTenantDashboardMetricsUseCase::class)->execute($user);
+        return app(GetTenantDashboardMetricsUseCase::class)->execute($user, $this->productSearch, $this->bookingSearch);
     }
 
     #[Computed]
@@ -132,6 +157,40 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         return KategoriProduk::query()->orderBy('nama_kategori')->get();
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public function colorOptions(): array
+    {
+        return ['Black', 'Grey', 'Red', 'White', 'Silver'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function durasiOptions(): array
+    {
+        return [
+            '6_jam' => '6 Jam',
+            '12_jam' => '12 Jam',
+            '1_hari' => '1 Hari',
+            '3_hari' => '3 Hari',
+            '7_hari' => '7 Hari',
+            '15_hari' => '15 Hari',
+            '1_bulan' => '1 Bulan',
+            '2_bulan' => '2 Bulan',
+            '3_bulan' => '3 Bulan',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function emptyHargaDurasi(): array
+    {
+        return array_fill_keys(array_keys($this->durasiOptions()), '');
+    }
+
     public function showSection(string $section): void
     {
         if (in_array($section, ['ringkasan', 'produk', 'pesanan', 'profil', 'keamanan', 'komisi'], true)) {
@@ -170,7 +229,17 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $this->harga_sewa = '';
         $this->total_stock_unit = '1';
         $this->deskripsi_lengkap = '';
+        $this->color_produk = [];
+        $this->durasi_terpilih = ['1_hari'];
+        $this->harga_durasi = $this->emptyHargaDurasi();
+        $this->fotos = [];
         $this->showProductModal = true;
+    }
+
+    public function removeFoto(int $index): void
+    {
+        unset($this->fotos[$index]);
+        $this->fotos = array_values($this->fotos);
     }
 
     public function closeProductModal(): void
@@ -192,22 +261,66 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
             return;
         }
 
-        $validated = $this->validate([
+        $rules = [
             'nama_produk' => ['required', 'string', 'max:120'],
             'id_kategori' => ['required', 'exists:kategori_produk,id_kategori'],
             'harga_sewa' => ['required', 'numeric', 'min:0'],
             'total_stock_unit' => ['required', 'integer', 'min:0'],
             'deskripsi_lengkap' => ['nullable', 'string', 'max:1000'],
+            'color_produk' => ['array'],
+            'color_produk.*' => ['string', 'max:30'],
+            'durasi_terpilih' => ['required', 'array', 'min:1'],
+            'durasi_terpilih.*' => ['string', Rule::in(array_keys($this->durasiOptions()))],
+            'harga_durasi' => ['array'],
+            'fotos' => ['array', 'max:8'],
+            'fotos.*' => ['image', 'max:4096'],
+        ];
+
+        foreach ($this->durasi_terpilih as $kodeDurasi) {
+            $rules["harga_durasi.{$kodeDurasi}"] = ['required', 'numeric', 'min:0'];
+        }
+
+        $validated = $this->validate($rules, [
+            'durasi_terpilih.required' => 'Pilih minimal satu durasi sewa.',
+            'durasi_terpilih.min' => 'Pilih minimal satu durasi sewa.',
+            'harga_durasi.*.required' => 'Harga untuk durasi yang dipilih wajib diisi.',
+            'harga_durasi.*.numeric' => 'Harga durasi harus berupa angka.',
+            'harga_durasi.*.min' => 'Harga durasi tidak boleh negatif.',
         ]);
 
-        Produk::query()->create([
-            'id_tenant' => $tenant->id_tenant,
-            'id_kategori' => (int) $validated['id_kategori'],
-            'nama_produk' => $validated['nama_produk'],
-            'deskripsi_lengkap' => $validated['deskripsi_lengkap'] ?: '-',
-            'harga_sewa' => $validated['harga_sewa'],
-            'total_stock_unit' => (int) $validated['total_stock_unit'],
-        ]);
+        DB::transaction(function () use ($tenant, $validated): void {
+            $produk = Produk::query()->create([
+                'id_tenant' => $tenant->id_tenant,
+                'id_kategori' => (int) $validated['id_kategori'],
+                'nama_produk' => $validated['nama_produk'],
+                'color_produk' => empty($validated['color_produk']) ? null : implode(', ', $validated['color_produk']),
+                'deskripsi_lengkap' => $validated['deskripsi_lengkap'] ?: '-',
+                'harga_sewa' => $validated['harga_sewa'],
+                'total_stock_unit' => (int) $validated['total_stock_unit'],
+            ]);
+
+            foreach ($validated['durasi_terpilih'] as $kodeDurasi) {
+                DurasiProduk::query()->create([
+                    'id_produk' => $produk->id_produk,
+                    'durasi' => $kodeDurasi,
+                    'nama_durasi' => $this->durasiOptions()[$kodeDurasi],
+                    'harga' => (float) $validated['harga_durasi'][$kodeDurasi],
+                ]);
+            }
+
+            foreach ($this->fotos as $foto) {
+                $path = $foto->store('produk', 'public');
+
+                if (! $path) {
+                    continue;
+                }
+
+                GaleriFotoProduk::query()->create([
+                    'id_produk' => $produk->id_produk,
+                    'url_foto_produk' => Storage::disk('public')->url($path),
+                ]);
+            }
+        });
 
         unset($this->dashboard, $this->chart);
 
@@ -218,6 +331,10 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $this->harga_sewa = '';
         $this->total_stock_unit = '1';
         $this->deskripsi_lengkap = '';
+        $this->color_produk = [];
+        $this->durasi_terpilih = ['1_hari'];
+        $this->harga_durasi = [];
+        $this->fotos = [];
 
         session()->flash('status', 'Produk baru berhasil ditambahkan.');
     }
@@ -678,12 +795,24 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                 <h1 class="text-lg font-bold tracking-tight text-black">Kelola Produk</h1>
                                 <p class="mt-1 text-xs text-neutral-500">Pantau katalog inventaris gear dan ketersediaan unit Anda.</p>
                             </div>
-                            <button type="button" wire:click="openProductModal" class="inline-flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
-                                </svg>
-                                <span>Tambah Produk</span>
-                            </button>
+
+                            <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                                <div class="relative w-full sm:w-64">
+                                    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-neutral-400">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                                        </svg>
+                                    </span>
+                                    <input type="search" wire:model.live.debounce.300ms="productSearch" autocomplete="off" placeholder="Cari produk, kategori, status..." class="w-full rounded-md border border-neutral-300 bg-white py-2.5 pl-9 pr-3 text-xs text-black outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-1 focus:ring-black">
+                                </div>
+
+                                <button type="button" wire:click="openProductModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
+                                    </svg>
+                                    <span>Tambah Produk</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -700,7 +829,12 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                 <tbody class="divide-y divide-neutral-100">
                                     @forelse ($dashboard['products'] as $product)
                                         <tr class="transition hover:bg-neutral-50">
-                                            <td class="px-6 py-4 font-semibold text-black">{{ $product['nama'] }}</td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <img src="{{ $product['foto'] }}" alt="{{ $product['nama'] }}" loading="lazy" class="h-10 w-10 shrink-0 rounded-md border border-neutral-200 object-cover" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80';">
+                                                    <span class="font-semibold text-black">{{ $product['nama'] }}</span>
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4 text-neutral-500">{{ $product['kategori'] }}</td>
                                             <td class="px-6 py-4 font-medium text-black">{{ $this->rupiah($product['harga']) }}</td>
                                             <td class="px-6 py-4 text-neutral-500">{{ $product['stok'] }} unit</td>
@@ -710,7 +844,13 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="px-6 py-12 text-center text-xs text-neutral-500">Belum ada produk pada katalog Anda.</td>
+                                            <td colspan="5" class="px-6 py-12 text-center text-xs text-neutral-500">
+                                                @if (trim($productSearch) !== '')
+                                                    Tidak ada produk yang cocok dengan pencarian "{{ $productSearch }}".
+                                                @else
+                                                    Belum ada produk pada katalog Anda.
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -719,9 +859,20 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                     </section>
                 @elseif ($section === 'pesanan')
                     <section class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                        <div class="border-b border-neutral-200 px-5 py-5 md:px-6">
-                            <h1 class="text-lg font-bold tracking-tight text-black">Kelola Pesanan Sewa</h1>
-                            <p class="mt-1 text-xs text-neutral-500">Daftar pesanan terbaru beserta status penyewaan unit.</p>
+                        <div class="flex flex-col gap-4 border-b border-neutral-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between md:px-6">
+                            <div>
+                                <h1 class="text-lg font-bold tracking-tight text-black">Kelola Pesanan Sewa</h1>
+                                <p class="mt-1 text-xs text-neutral-500">Daftar pesanan terbaru beserta status penyewaan unit.</p>
+                            </div>
+
+                            <div class="relative w-full sm:w-72">
+                                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-neutral-400">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                                    </svg>
+                                </span>
+                                <input type="search" wire:model.live.debounce.300ms="bookingSearch" autocomplete="off" placeholder="Cari kode, produk, penyewa, status..." class="w-full rounded-md border border-neutral-300 bg-white py-2.5 pl-9 pr-3 text-xs text-black outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-1 focus:ring-black">
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -750,7 +901,13 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-12 text-center text-xs text-neutral-500">Belum ada pesanan sewa.</td>
+                                            <td colspan="6" class="px-6 py-12 text-center text-xs text-neutral-500">
+                                                @if (trim($bookingSearch) !== '')
+                                                    Tidak ada pesanan yang cocok dengan pencarian "{{ $bookingSearch }}".
+                                                @else
+                                                    Belum ada pesanan sewa.
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -847,54 +1004,142 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                         </div>
                     </section>
                 @elseif ($section === 'komisi')
+                    @php
+                        $billing = $dashboard['commission_billing'];
+                        $bank = config('mirrorcam.platform_bank');
+                    @endphp
+
                     <section class="space-y-5">
-                        <div class="grid gap-4 md:grid-cols-3">
-                            <div class="rounded-lg border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PENDAPATAN KOTOR</p>
-                                <p class="mt-4 text-xl font-bold tracking-tight text-black">{{ $this->rupiah($stats['pendapatan_kotor']) }}</p>
+                        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                            <h1 class="text-[25px] font-bold leading-tight tracking-tight text-black md:text-[28px]">Pembayaran Komisi</h1>
+                            <p class="mt-2 text-xs leading-relaxed text-neutral-500 md:text-sm">Kelola tanggungan komisi {{ $tenant['nama_toko'] }} kepada PT. MirrorCam.</p>
+                        </div>
+
+                        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                            <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Tanggungan Komisi ke MirrorCam</h2>
+
+                            <div class="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">JUMLAH TANGGUNGAN</p>
+                                    @if ($billing['has_bill'])
+                                        <p class="mt-2 text-[30px] font-bold leading-tight tracking-tight text-black md:text-[36px]">{{ $this->rupiah($billing['amount']) }}</p>
+                                    @else
+                                        <p class="mt-2 text-[30px] font-bold leading-tight tracking-tight text-neutral-700 md:text-[36px]">Belum tersedia</p>
+                                    @endif
+                                </div>
+
+                                @if ($billing['has_bill'])
+                                    <a href="#qris-pembayaran" class="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-[#e9e9e9] px-5 py-3 text-xs font-semibold text-black transition hover:bg-[#dedede]">
+                                        Bayar Sekarang
+                                    </a>
+                                @else
+                                    <button type="button" disabled class="inline-flex cursor-not-allowed items-center justify-center whitespace-nowrap rounded-md bg-[#e9e9e9] px-5 py-3 text-xs font-semibold text-neutral-400">
+                                        Bayar Sekarang
+                                    </button>
+                                @endif
                             </div>
-                            <div class="rounded-lg border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">KOMISI PLATFORM</p>
-                                <p class="mt-4 text-xl font-bold tracking-tight text-black">{{ $this->rupiah($stats['komisi_platform']) }}</p>
-                            </div>
-                            <div class="rounded-lg border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                                <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PENDAPATAN BERSIH</p>
-                                <p class="mt-4 text-xl font-bold tracking-tight text-black">{{ $this->rupiah($stats['pendapatan_tenant']) }}</p>
+
+                            <div class="mt-6 grid gap-4 border-t border-neutral-200 pt-5 sm:grid-cols-3">
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PENYEDIA LAYANAN</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-black">PT. MirrorCam</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">PERIODE TAGIHAN</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-black">{{ $billing['periode'] ?? 'Belum tersedia' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-500">JATUH TEMPO</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-black">{{ $billing['jatuh_tempo'] ?? 'Belum tersedia' }}</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                            <div class="border-b border-neutral-200 px-5 py-5 md:px-6">
-                                <h1 class="text-lg font-bold tracking-tight text-black">Pembayaran Komisi</h1>
-                                <p class="mt-1 text-xs text-neutral-500">Rincian komisi platform dari transaksi penyewaan tenant.</p>
+                        <div class="grid gap-5 lg:grid-cols-2">
+                            <div id="qris-pembayaran" class="scroll-mt-24 rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                                <div class="flex items-start justify-between gap-3">
+                                    <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Pembayaran via QRIS</h2>
+                                    <span class="text-sm font-bold tracking-wide text-black">QRIS</span>
+                                </div>
+                                <p class="mt-3 text-xs leading-relaxed text-neutral-500 md:text-sm">Bayar komisi dengan memindai QRIS melalui aplikasi bank atau dompet digital yang mendukung QRIS.</p>
+
+                                <div class="mt-5 rounded-lg border border-neutral-200 bg-[#f4f4f5] px-5 py-6">
+                                    @if ($billing['has_bill'] && $billing['qris_data_uri'])
+                                        <div class="flex flex-col items-center gap-3">
+                                            <img src="{{ $billing['qris_data_uri'] }}" alt="QRIS Pembayaran Komisi" class="h-44 w-44 rounded-md bg-white p-2 shadow-xs">
+                                            <p class="text-sm font-bold text-black">QRIS siap dipindai</p>
+                                            <p class="text-center text-[11px] leading-relaxed text-neutral-500">
+                                                Nominal {{ $this->rupiah($billing['amount']) }} &middot; {{ $billing['periode'] }}<br>
+                                                Ref. {{ $billing['reference'] }}
+                                            </p>
+                                        </div>
+                                    @else
+                                        <div class="flex flex-col items-center gap-3 py-3 text-center">
+                                            <span class="flex h-11 w-11 items-center justify-center rounded-lg bg-[#e9e9e9] text-neutral-500">
+                                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zM14 14h2v2h-2v-2zm4 0h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2z" />
+                                                </svg>
+                                            </span>
+                                            <p class="text-sm font-bold text-black">QRIS belum tersedia</p>
+                                            <p class="text-[11px] leading-relaxed text-neutral-500">QRIS tersedia setelah tagihan diterbitkan.<br>Belum ada kode pembayaran yang dapat dipindai.</p>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full min-w-[680px] text-left text-xs">
-                                    <thead class="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-500">
-                                        <tr>
-                                            <th class="px-6 py-3 font-semibold">Kode</th>
-                                            <th class="px-6 py-3 font-semibold">Tanggal</th>
-                                            <th class="px-6 py-3 font-semibold">Nilai Transaksi</th>
-                                            <th class="px-6 py-3 font-semibold">Persentase</th>
-                                            <th class="px-6 py-3 font-semibold">Komisi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-neutral-100">
-                                        @forelse ($dashboard['commissions'] as $commission)
-                                            <tr class="transition hover:bg-neutral-50">
-                                                <td class="px-6 py-4 font-semibold text-black">{{ $commission['kode'] }}</td>
-                                                <td class="px-6 py-4 text-neutral-500">{{ $commission['tanggal'] }}</td>
-                                                <td class="px-6 py-4 text-neutral-600">{{ $this->rupiah($commission['pendapatan']) }}</td>
-                                                <td class="px-6 py-4 text-neutral-500">{{ rtrim(rtrim(number_format($commission['persen'], 2, ',', '.'), '0'), ',') }}%</td>
-                                                <td class="px-6 py-4 font-medium text-black">{{ $this->rupiah($commission['komisi']) }}</td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="5" class="px-6 py-12 text-center text-xs text-neutral-500">Belum ada data komisi platform.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
+
+                            <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="flex h-6 w-6 items-center justify-center text-black">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6M3 9h18" />
+                                        </svg>
+                                    </span>
+                                    <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Informasi Rekening Tujuan</h2>
+                                </div>
+                                <p class="mt-3 text-xs leading-relaxed text-neutral-500 md:text-sm">Informasi rekening penyedia layanan untuk pembayaran komisi kepada PT. MirrorCam.</p>
+
+                                <dl class="mt-4 divide-y divide-neutral-200">
+                                    <div class="flex items-center justify-between gap-4 py-3.5">
+                                        <dt class="text-xs text-neutral-500 md:text-sm">Atas nama</dt>
+                                        <dd class="text-right text-xs font-semibold text-black md:text-sm">{{ $bank['atas_nama'] }}</dd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-4 py-3.5">
+                                        <dt class="text-xs text-neutral-500 md:text-sm">Bank</dt>
+                                        <dd class="text-right text-xs font-semibold text-black md:text-sm">{{ $bank['nama_bank'] }}</dd>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-4 py-3.5">
+                                        <dt class="text-xs text-neutral-500 md:text-sm">Nomor rekening</dt>
+                                        <dd class="text-right text-xs font-semibold text-black md:text-sm">{{ $bank['nomor_rekening'] }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] md:p-7">
+                            <h2 class="text-base font-bold tracking-tight text-black md:text-lg">Cara Membayar Komisi</h2>
+
+                            <div class="mt-5 grid gap-5 sm:grid-cols-3">
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#f1f1f1] text-[11px] font-bold text-black">1</span>
+                                    <div>
+                                        <p class="text-xs font-bold text-black md:text-sm">Periksa tagihan</p>
+                                        <p class="mt-1 text-[11px] leading-relaxed text-neutral-500">Setelah diterbitkan, cek jumlah tanggungan, periode, dan jatuh tempo.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#f1f1f1] text-[11px] font-bold text-black">2</span>
+                                    <div>
+                                        <p class="text-xs font-bold text-black md:text-sm">Pilih Bayar Sekarang</p>
+                                        <p class="mt-1 text-[11px] leading-relaxed text-neutral-500">QRIS pembayaran akan tersedia setelah tagihan diterbitkan.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#f1f1f1] text-[11px] font-bold text-black">3</span>
+                                    <div>
+                                        <p class="text-xs font-bold text-black md:text-sm">Pindai dan bayar</p>
+                                        <p class="mt-1 text-[11px] leading-relaxed text-neutral-500">Periksa penerima serta nominal di aplikasi, lalu simpan bukti pembayaran.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -905,7 +1150,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
     @if ($showProductModal)
         <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6" wire:click.self="closeProductModal">
-            <div class="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl">
+            <div class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
                 <div class="flex items-start justify-between border-b border-neutral-200 px-6 py-4">
                     <div>
                         <h3 class="text-base font-bold text-black">Tambah Produk Baru</h3>
@@ -918,7 +1163,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                     </button>
                 </div>
 
-                <form wire:submit="saveProduct" class="space-y-4 px-6 py-5">
+                <form wire:submit="saveProduct" class="max-h-[calc(92vh-73px)] space-y-4 overflow-y-auto px-6 py-5">
                     <div>
                         <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Nama Produk</label>
                         <input type="text" wire:model="nama_produk" placeholder="Contoh: Sony FX3 Cinema Line" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">
@@ -944,10 +1189,83 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                         </div>
                     </div>
 
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Total Stok Unit</label>
+                            <input type="number" min="0" wire:model="total_stock_unit" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">
+                            @error('total_stock_unit') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Galeri Foto</label>
+                            <input type="file" wire:model="fotos" multiple accept="image/png,image/jpeg,image/webp" class="block w-full cursor-pointer text-[11px] text-neutral-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-black file:px-3 file:py-2 file:text-[11px] file:font-semibold file:text-white hover:file:bg-neutral-800">
+                            <p class="mt-1 text-[10px] text-neutral-400">JPG/PNG/WEBP, maks. 4MB per foto (maks. 8 foto).</p>
+                            @error('fotos.*') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div wire:loading wire:target="fotos" class="text-[10px] font-semibold text-neutral-500">Mengunggah foto...</div>
+
+                    @if (! empty($fotos))
+                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                            @foreach ($fotos as $index => $foto)
+                                <div wire:key="foto-{{ $index }}" class="group relative aspect-square overflow-hidden rounded-md border border-neutral-200 bg-neutral-50">
+                                    @if ($foto)
+                                        <img src="{{ $foto->temporaryUrl() }}" alt="Pratinjau foto {{ $index + 1 }}" class="h-full w-full object-cover">
+                                    @endif
+                                    <button type="button" wire:click="removeFoto({{ $index }})" title="Hapus foto" class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] font-bold text-white transition hover:bg-black">
+                                        &times;
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
                     <div>
-                        <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Total Stok Unit</label>
-                        <input type="number" min="0" wire:model="total_stock_unit" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">
-                        @error('total_stock_unit') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Warna Tersedia</label>
+                        @php
+                            $colorSwatches = [
+                                'Black' => '#000000',
+                                'Grey' => '#9ca3af',
+                                'Red' => '#ef4444',
+                                'White' => '#ffffff',
+                                'Silver' => '#d1d5db',
+                            ];
+                        @endphp
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($this->colorOptions() as $color)
+                                <label class="cursor-pointer">
+                                    <input type="checkbox" wire:model="color_produk" value="{{ $color }}" class="peer sr-only">
+                                    <span class="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 transition peer-checked:border-black peer-checked:bg-black peer-checked:text-white">
+                                        <span class="h-2.5 w-2.5 rounded-full border border-neutral-300" style="background-color: {{ $colorSwatches[$color] ?? '#000000' }}"></span>
+                                        {{ $color }}
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('color_produk.*') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Pilihan Durasi & Harga Sewa</label>
+                        <p class="mb-2 text-[10px] text-neutral-400">Centang durasi yang tersedia, lalu isi harga sewanya.</p>
+                        <div class="space-y-2">
+                            @foreach ($this->durasiOptions() as $value => $label)
+                                <div class="flex flex-col gap-2 rounded-md border border-neutral-200 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <label class="flex cursor-pointer items-center gap-2 text-[11px] font-semibold text-neutral-700">
+                                        <input type="checkbox" wire:model="durasi_terpilih" value="{{ $value }}" class="h-4 w-4 rounded border-neutral-300 text-black focus:ring-black">
+                                        {{ $label }}
+                                    </label>
+                                    <div class="relative w-full sm:w-48">
+                                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[11px] text-neutral-400">Rp</span>
+                                        <input type="number" min="0" wire:model="harga_durasi.{{ $value }}" placeholder="Harga sewa" class="w-full rounded-md border border-neutral-300 bg-white py-2 pl-9 pr-3 text-xs text-black outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-1 focus:ring-black">
+                                    </div>
+                                </div>
+                                @error("harga_durasi.$value") <p class="text-[10px] text-red-600">{{ $message }}</p> @enderror
+                            @endforeach
+                        </div>
+                        @error('durasi_terpilih') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        @error('durasi_terpilih.*') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
@@ -958,7 +1276,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
                     <div class="flex items-center justify-end gap-3 border-t border-neutral-100 pt-4">
                         <button type="button" wire:click="closeProductModal" class="rounded-md border border-neutral-300 bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-neutral-50">Batal</button>
-                        <button type="submit" wire:loading.attr="disabled" class="rounded-md bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60">Simpan Produk</button>
+                        <button type="submit" wire:loading.attr="disabled" wire:target="saveProduct, fotos" class="rounded-md bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60">Simpan Produk</button>
                     </div>
                 </form>
             </div>

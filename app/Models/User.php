@@ -37,6 +37,25 @@ class User extends Authenticatable
         return $this->belongsTo(AccountGoogle::class, 'id_user_google', 'id_user_google');
     }
 
+    public function tenant()
+    {
+        return $this->hasOne(Tenant::class, 'id_akun_pemilik', 'id_akun');
+    }
+
+    public function isMitra(): bool
+    {
+        return in_array($this->role, ['mitra', 'superadmin'], true) || $this->tenant()->exists();
+    }
+
+    public function getRoleLabelAttribute(): string
+    {
+        if ($this->role === 'superadmin') {
+            return 'Superadmin';
+        }
+
+        return $this->isMitra() ? 'Mitra' : 'User';
+    }
+
     public function pengaduan()
     {
         return $this->hasMany(PengaduanPelanggan::class, 'id_akun', 'id_akun');

@@ -5,7 +5,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
     <!-- Filter Bar: Header, Search Input, and Rating Pills -->
-    @include('customer.tenant.components.filter-bar', [
+    @include('customer.tenant.components.tenant-filter-bar', [
         'activeRating' => $activeRating,
         'searchKeyword' => $searchKeyword,
     ])

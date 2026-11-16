@@ -14,7 +14,7 @@ class Tenant extends Model
 
     protected $primaryKey = 'id_tenant';
 
-    protected $guarded = [];
+    protected $guarded = ['id_tenant'];
 
     /**
      * Relationship: Products owned by this tenant
@@ -95,12 +95,11 @@ class Tenant extends Model
      */
     public function getServiceCategoryAttribute(): string
     {
-        // Check loaded produks or query
         $hasStudio = false;
 
         if ($this->relationLoaded('produks')) {
             $hasStudio = $this->produks->contains(function ($item) {
-                $catName = strtolower($item->kategori->nama_kategori ?? '');
+                $catName = strtolower($item->kategori?->nama_kategori ?? '');
                 $prodName = strtolower($item->nama_produk ?? '');
 
                 return str_contains($catName, 'studio') || str_contains($prodName, 'studio');
@@ -198,10 +197,9 @@ class Tenant extends Model
     public function resolveRouteBinding($value, $field = null)
     {
         if ($field === 'slug' || $field === null) {
-            // First try matching numeric id directly
             if (is_numeric($value)) {
                 $tenant = $this->newQuery()
-                    ->where('status_mitra', 'aktif')
+                    ->whereIn('status_mitra', ['aktif', 'Aktif'])
                     ->where('id_tenant', $value)
                     ->first();
 
@@ -210,9 +208,8 @@ class Tenant extends Model
                 }
             }
 
-            // Match slug
             $tenants = $this->newQuery()
-                ->where('status_mitra', 'aktif')
+                ->whereIn('status_mitra', ['aktif', 'Aktif'])
                 ->get();
 
             $matched = $tenants->first(function ($t) use ($value) {

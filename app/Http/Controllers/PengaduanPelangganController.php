@@ -102,6 +102,7 @@ class PengaduanPelangganController extends Controller
             'Penahanan Deposit Sepihak',
             'Manipulasi Jam Pengembalian',
             'Perilaku Buruk / Intimidasi Petugas Hub',
+            'Lainnya',
         ];
 
         $viewName = view()->exists('customer.pengaduan.index') ? 'customer.pengaduan.index' : 'pages.customer.pengaduan.index';
