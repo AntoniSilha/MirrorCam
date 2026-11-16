@@ -33,12 +33,12 @@ class CatalogItemResource extends JsonResource
             : ($this->resource['category_name'] ?? 'Kamera');
 
         $price = $isModel
-            ? (float) ($this->resource->harga_sewa ?? 0)
-            : (float) ($this->resource['harga_sewa'] ?? 0);
+            ? (float) ($this->resource->lowest_duration_price ?? 0)
+            : (float) ($this->resource['lowest_duration_price'] ?? 0);
 
         $priceUnit = $isModel
-            ? ($this->resource->price_unit ?? 'hari')
-            : ($this->resource['price_unit'] ?? 'hari');
+            ? ($this->resource->price_unit ?? 'durasi')
+            : ($this->resource['price_unit'] ?? 'durasi');
 
         $formattedPrice = $isModel
             ? ($this->resource->formatted_price ?? ('Rp '.number_format($price, 0, ',', '.').' / '.$priceUnit))

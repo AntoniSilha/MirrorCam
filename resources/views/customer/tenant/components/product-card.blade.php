@@ -70,10 +70,10 @@
             </p>
             <div class="flex items-baseline gap-1 mt-0.5">
                 <span class="text-base font-bold text-[#000000]">
-                    Rp {{ number_format($produk->harga_sewa, 0, ',', '.') }}
+                    Mulai Rp {{ number_format($produk->harga_mulai, 0, ',', '.') }}
                 </span>
                 <span class="text-[11px] text-black/50">
-                    {{ $isStudio ? '/ sesi (2 Jam)' : '/ hari' }}
+                    / durasi
                 </span>
             </div>
 

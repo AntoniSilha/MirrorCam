@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.user' => EnsureUserIsCustomer::class,
             'role.mitra' => EnsureUserIsMitra::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'midtrans/callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

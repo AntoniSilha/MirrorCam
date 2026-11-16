@@ -40,7 +40,7 @@ class GetTenantDashboardMetricsUseCase
     protected function databaseData(Tenant $tenant, string $productSearch = '', string $bookingSearch = ''): array
     {
         $products = Produk::query()
-            ->with('galeri')
+            ->with(['galeri', 'durasi'])
             ->where('id_tenant', $tenant->id_tenant)
             ->orderBy('nama_produk')
             ->get();
@@ -71,16 +71,13 @@ class GetTenantDashboardMetricsUseCase
         $platformCommission = (float) $commissions->sum('total_komisi');
         $netRevenue = (float) array_sum($netByBooking);
 
-        $activeBookings = $bookings->filter(
-            fn (DetailPemesananTenant $booking) => ! in_array(
-                Str::lower((string) $booking->status_sewa),
-                ['selesai', 'completed', 'dibatalkan', 'cancelled'],
-                true
-            )
-        );
+        $activeBookings = $bookings->filter(function (DetailPemesananTenant $booking): bool {
+            $status = Str::lower(trim((string) $booking->status_sewa));
 
-        $activeProductIds = $activeBookings->pluck('id_produk')->unique();
-        $rentedUnits = (int) $products->whereIn('id_produk', $activeProductIds)->sum('total_stock_unit');
+            return in_array($status, ['booking aktif', 'sedang disewa', 'terlambat', 'active', 'rented'], true);
+        });
+        $rentedUnits = $activeBookings->count();
+        $rentedByProduct = $activeBookings->countBy('id_produk');
 
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
@@ -99,15 +96,19 @@ class GetTenantDashboardMetricsUseCase
 
         [$chartLabels, $chartValues] = $this->chartData($bookings, $netByBooking);
 
-        $productRows = $products->map(fn (Produk $product) => [
+        $productRows = $products->map(function (Produk $product) use ($rentedByProduct, $categories): array {
+            $availableStock = max(0, (int) $product->total_stock_unit - (int) $rentedByProduct->get($product->id_produk, 0));
+
+            return [
             'id' => $product->id_produk,
             'nama' => $product->nama_produk,
             'foto' => $product->primary_image,
             'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
-            'harga' => (float) $product->harga_sewa,
-            'stok' => (int) $product->total_stock_unit,
-            'status' => $product->total_stock_unit > 0 ? 'Tersedia' : 'Stok Habis',
-        ])->values();
+            'harga' => (float) ($product->harga_mulai ?? 0),
+            'stok' => $availableStock,
+            'status' => $availableStock > 0 ? 'Tersedia' : 'Stok Habis',
+        ];
+        })->values();
 
         $bookingRows = $bookings->map(fn (DetailPemesananTenant $booking) => [
             'kode' => $booking->sub_order_eksternal ?: 'MC-'.str_pad((string) $booking->id_pemesanan, 4, '0', STR_PAD_LEFT),

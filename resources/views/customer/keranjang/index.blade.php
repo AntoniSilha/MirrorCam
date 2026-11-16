@@ -11,6 +11,17 @@
         </div>
     @endif
 
+    @if ($errors->any())
+        <div class="mb-5 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-xs text-red-700" role="alert">
+            <p class="font-bold">Pesanan belum dapat diproses:</p>
+            <ul class="mt-1 list-inside list-disc">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <!-- Header Judul -->
     <div class="mb-6">
         <h1 class="text-2xl sm:text-3xl font-bold text-[#000000] tracking-tight">
@@ -98,7 +109,7 @@
 
             <!-- Kolom Kanan: Enkripsi Verifikasi KYC & Ringkasan Pembayaran -->
             <form method="POST" action="{{ route('keranjang.checkout') }}" enctype="multipart/form-data"
-                  x-data="{ fileName: '{{ session('mirrorcam_kyc_filename', 'KTP_Verified.jpg') }}' }"
+                  x-data="{ fileName: @js($hasKtp ? 'KTP sudah terdaftar' : 'Belum ada file dipilih'), selectedFile: false }"
                   class="lg:col-span-4 bg-[#ffffff] border border-black/10 rounded-[4px] p-5 space-y-5">
                 @csrf
                 <input type="hidden" name="total_booking" value="{{ $totalBooking }}">
@@ -113,19 +124,23 @@
                 <!-- Unggahan Identitas -->
                 <div>
                     <label class="block text-xs font-bold text-[#000000] mb-2">Unggahan Identitas</label>
+                    <p class="mb-2 text-[11px] text-black/55">Wajib unggah KTP jika akun Anda belum memiliki data KTP terdaftar.</p>
                     <label class="block p-3.5 rounded-[4px] border border-[#000000] bg-[#ffffff] cursor-pointer hover:bg-[#f9f9f9] transition">
-                        <input type="file" name="ktp_file" accept=".jpg,.jpeg,.png,.pdf" class="hidden"
-                               @change="if($event.target.files.length) fileName =$event.target.files[0].name">
+                        <input type="file" name="ktp_file" accept=".jpg,.jpeg,.png,.pdf" @required(! $hasKtp) class="hidden"
+                               @change="if($event.target.files.length) { fileName = $event.target.files[0].name; selectedFile = true }">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-xs font-bold text-[#000000]" x-text="fileName"></p>
-                                <p class="text-[11px] font-semibold text-[#16a34a] mt-0.5">Success</p>
+                                <p class="text-[11px] font-semibold mt-0.5 {{ $hasKtp ? 'text-[#16a34a]' : 'text-neutral-500' }}" x-text="selectedFile ? 'File siap diunggah' : @js($hasKtp ? 'KTP terdaftar' : 'Belum diunggah')"></p>
                             </div>
                             <span class="text-[10px] font-semibold px-2 py-1 rounded-[4px] bg-[#f9f9f9] border border-black/15 text-[#000000]">
-                                Ganti File
+                                {{ $hasKtp ? 'Ganti File' : 'Unggah File' }}
                             </span>
                         </div>
                     </label>
+                    @error('ktp_file')
+                        <p class="mt-2 text-[11px] font-semibold text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Rincian Total -->

@@ -67,6 +67,7 @@ class GetHomeCatalogUseCase
     {
         if (Schema::hasTable('produks')) {
             return Product::with(['tenant', 'category', 'gallery'])
+                ->withMin('durations as lowest_duration_price', 'harga')
                 ->withAvg('reviews as avg_rating', 'rating_nilai')
                 ->withCount(['reviews', 'pemesanans'])
                 ->get();

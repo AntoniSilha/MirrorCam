@@ -104,7 +104,6 @@ it('displays active tenants dynamically from database', function () {
         'id_kategori' => $category->id_kategori,
         'nama_produk' => 'Sony FX3 Cinema Line',
         'deskripsi_lengkap' => 'Cinema line full frame kamera',
-        'harga_sewa' => 750000,
         'total_stock_unit' => 12,
     ]);
 
@@ -142,7 +141,6 @@ it('dynamically determines service category subtitle based on products', functio
         'id_kategori' => $categoryCamera->id_kategori,
         'nama_produk' => 'Canon EOS R5',
         'deskripsi_lengkap' => 'Mirrorless 8K',
-        'harga_sewa' => 500000,
         'total_stock_unit' => 5,
     ]);
 
@@ -153,7 +151,6 @@ it('dynamically determines service category subtitle based on products', functio
         'id_kategori' => $categoryStudio->id_kategori,
         'nama_produk' => 'Mac Studio M2 Max Suite',
         'deskripsi_lengkap' => 'Studio pasca-produksi',
-        'harga_sewa' => 1500000,
         'total_stock_unit' => 2,
     ]);
 
@@ -192,7 +189,6 @@ it('filters tenants dynamically by rating pill', function () {
         'id_kategori' => $cat->id_kategori,
         'nama_produk' => 'Kamera A',
         'deskripsi_lengkap' => 'Deskripsi',
-        'harga_sewa' => 100000,
         'total_stock_unit' => 1,
     ]);
     $prod2 = helperCreateProduct([
@@ -200,7 +196,6 @@ it('filters tenants dynamically by rating pill', function () {
         'id_kategori' => $cat->id_kategori,
         'nama_produk' => 'Kamera B',
         'deskripsi_lengkap' => 'Deskripsi',
-        'harga_sewa' => 100000,
         'total_stock_unit' => 1,
     ]);
 

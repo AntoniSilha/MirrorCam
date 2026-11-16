@@ -185,9 +185,8 @@
             </p>
 
             <div class="mt-7">
-                <span class="text-3xl sm:text-4xl font-bold text-[#000000]">
-                    Rp {{ number_format($produk->harga_sewa, 0, ',', '.') }} / Hari
-                </span>
+                <span class="text-3xl sm:text-4xl font-bold text-[#000000]"
+                      x-text="selectedDurationOption ? 'Rp ' + new Intl.NumberFormat('id-ID').format(totalHarga) + ' / ' + selectedDurationLabel : 'Harga tidak tersedia'"></span>
             </div>
 
             <!-- Pilihan Warna -->

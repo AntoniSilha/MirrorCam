@@ -34,7 +34,8 @@ class TenantCatalogController extends Controller
         $totalSemuaAlat = Produk::where('id_tenant', $id)->count();
 
         // Ambil daftar produk milik tenant + relasi foto galeri & kategori
-        $query = Produk::with(['galeri', 'kategori'])
+        $query = Produk::with(['galeri', 'kategori', 'durasi'])
+            ->withMin('durasi as lowest_duration_price', 'harga')
             ->withAvg('reviews as avg_rating', 'rating_nilai')
             ->withCount(['reviews', 'pemesanans'])
             ->where('id_tenant', $id);
@@ -52,8 +53,8 @@ class TenantCatalogController extends Controller
         }
 
         match ($request->get('sort', 'terpopuler')) {
-            'termurah' => $query->orderBy('harga_sewa', 'asc'),
-            'termahal' => $query->orderBy('harga_sewa', 'desc'),
+            'termurah' => $query->orderBy('lowest_duration_price', 'asc'),
+            'termahal' => $query->orderBy('lowest_duration_price', 'desc'),
             default => $query->orderBy('id_produk', 'asc'),
         };
 

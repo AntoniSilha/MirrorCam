@@ -47,6 +47,7 @@ class TenantController extends Controller
             'detailOperasional',
             'produks.kategori',
             'produks.galeri',
+            'produks.durasi',
             'reviews.penyewa',
         ]);
 

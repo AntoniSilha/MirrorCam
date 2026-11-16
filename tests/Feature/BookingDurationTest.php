@@ -74,7 +74,6 @@ function bookingTestCreateProduct(): Produk
         'nama_produk' => 'Sony Booking Test',
         'deskripsi_lengkap' => 'Produk untuk pengujian durasi booking',
         'color_produk' => 'black',
-        'harga_sewa' => 150000,
         $stockCol => 5,
     ]);
 

@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\MidtransCallbackController;
 use App\Models\User;
 use App\Modules\Authentication\Controllers\GoogleRegistrationController;
 use App\Modules\TenantManagement\Controllers\MitraRegisterController;
 use App\Portals\Customer\Controllers\BookingCartController;
 use App\Portals\Customer\Controllers\HomeController;
+use App\Portals\Customer\Controllers\PaymentController;
+use App\Portals\Customer\Controllers\OrderTrackingController;
 use App\Portals\Customer\Controllers\PengaduanPelangganController;
 use App\Portals\Customer\Controllers\ProductCatalogController;
 use App\Portals\Customer\Controllers\TenantCatalogController;
@@ -43,7 +46,19 @@ Route::middleware(['auth', 'role.user'])->group(function () {
     Route::post('/keranjang/tambah', [BookingCartController::class, 'addToCart'])->name('keranjang.add');
     Route::post('/keranjang/hapus', [BookingCartController::class, 'removeFromCart'])->name('keranjang.remove');
     Route::post('/keranjang/checkout', [BookingCartController::class, 'checkout'])->name('keranjang.checkout');
+
+    // Halaman Pembayaran QRIS (Midtrans)
+    Route::get('/pembayaran/{token}', [PaymentController::class, 'show'])->name('pembayaran.show');
+    Route::post('/pembayaran/{token}/qris', [PaymentController::class, 'generate'])->name('pembayaran.qris');
+    Route::get('/pembayaran/{token}/status', [PaymentController::class, 'status'])->name('pembayaran.status');
+    Route::get('/pembayaran/{token}/sukses', [PaymentController::class, 'success'])->name('pembayaran.sukses');
+    Route::get('/pesanan/{bookingId}/status', [OrderTrackingController::class, 'show'])->name('pesanan.status');
+    Route::get('/pesanan/{bookingId}/nota', [OrderTrackingController::class, 'receipt'])->name('pesanan.nota');
+    Route::post('/pesanan/{bookingId}/komentar', [OrderTrackingController::class, 'storeReview'])->name('pesanan.komentar');
 });
+
+// Callback HTTP notification dari Midtrans (tanpa auth, CSRF dikecualikan di bootstrap/app.php)
+Route::post('/midtrans/callback', MidtransCallbackController::class)->name('midtrans.callback');
 
 Route::get('/auth/google/redirect', [GoogleRegistrationController::class, 'redirect'])->name('google.redirect');
 Route::get('/auth/google/callback', [GoogleRegistrationController::class, 'callback'])->name('google.callback');

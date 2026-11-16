@@ -31,7 +31,7 @@ class PengaduanPelangganController extends Controller
 
         // 2. Base isolated query for current customer
         $baseQuery = PengaduanPelanggan::query()
-            ->with(['tenant', 'pemesanan.produk.galeri', 'user'])
+            ->with(['tenant', 'pemesanan.produk.galeri', 'pemesanan.produk.durasi', 'user'])
             ->where('id_akun', $user->id_akun);
 
         // 3. Dynamic Summary Statistics for this user
@@ -88,7 +88,7 @@ class PengaduanPelangganController extends Controller
 
         // 8. Retrieve customer bookings for the complaint submission dropdown
         $ktpIds = VerifikasiKtp::where('id_akun', $user->id_akun)->pluck('id_ktp');
-        $userBookings = DetailPemesananTenant::with(['tenant', 'produk.galeri'])
+        $userBookings = DetailPemesananTenant::with(['tenant', 'produk.galeri', 'produk.durasi'])
             ->whereIn('id_ktp', $ktpIds)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -143,7 +143,7 @@ class PengaduanPelangganController extends Controller
 
         // Ensure booking exists (match sub_order_eksternal or id_pemesanan)
         $bookingIdentifier = $request->nomor_booking ?: $request->id_pemesanan;
-        $booking = DetailPemesananTenant::with(['tenant', 'produk'])
+        $booking = DetailPemesananTenant::with(['tenant', 'produk.durasi'])
             ->where('sub_order_eksternal', $bookingIdentifier)
             ->orWhere('id_pemesanan', $bookingIdentifier)
             ->firstOrFail();
@@ -206,7 +206,7 @@ class PengaduanPelangganController extends Controller
     {
         $user = $request->user();
 
-        $pengaduan = PengaduanPelanggan::with(['tenant', 'pemesanan.produk.galeri', 'user'])
+        $pengaduan = PengaduanPelanggan::with(['tenant', 'pemesanan.produk.galeri', 'pemesanan.produk.durasi', 'user'])
             ->where('id_akun', $user->id_akun)
             ->where(function ($q) use ($id) {
                 $q->where('id_pengaduan', $id)

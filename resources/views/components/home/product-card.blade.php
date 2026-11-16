@@ -68,7 +68,7 @@
 
         <!-- Sewa Button: Background #000000, Text #ffffff -->
         <a
-            href="{{ route('login') }}"
+            href="{{ route('produk.show', $product['id']) }}"
             class="py-1.5 px-2 bg-[#000000] hover:bg-[#222222] text-[#ffffff] text-center text-xs font-bold rounded-[4px] transition shadow-xs"
         >
             Sewa

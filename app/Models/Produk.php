@@ -36,6 +36,15 @@ class Produk extends Model
         return $this->hasMany(DurasiProduk::class, 'id_produk', 'id_produk');
     }
 
+    public function getHargaMulaiAttribute(): float
+    {
+        if ($this->relationLoaded('durasi')) {
+            return (float) ($this->durasi->min('harga') ?? 0);
+        }
+
+        return (float) $this->durasi()->min('harga');
+    }
+
     public function pemesanans(): HasMany
     {
         return $this->hasMany(DetailPemesananTenant::class, 'id_produk', 'id_produk');

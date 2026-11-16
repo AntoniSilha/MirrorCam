@@ -5,6 +5,7 @@ namespace App\Modules\CatalogAndInventory\Models;
 use App\Models\DetailPemesananTenant;
 use App\Models\GaleriFotoProduk;
 use App\Models\ReviewUlasanTenant;
+use App\Models\DurasiProduk;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property string $nama_produk
  * @property string|null $color_produk
  * @property string $deskripsi_lengkap
- * @property float $harga_sewa
+ * @property float|null $lowest_duration_price
  * @property int $total_stock_unit
  * @property string|null $thumbnail_url
  * @property float|null $rating
@@ -40,7 +41,6 @@ class Product extends Model
         'nama_produk',
         'color_produk',
         'deskripsi_lengkap',
-        'harga_sewa',
         'total_stock_unit',
         'thumbnail_url',
         'rating',
@@ -48,7 +48,6 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'harga_sewa' => 'decimal:2',
         'total_stock_unit' => 'integer',
         'rating' => 'float',
         'review_count' => 'integer',
@@ -82,6 +81,11 @@ class Product extends Model
     public function gallery(): HasMany
     {
         return $this->hasMany(GaleriFotoProduk::class, 'id_produk', 'id_produk');
+    }
+
+    public function durations(): HasMany
+    {
+        return $this->hasMany(DurasiProduk::class, 'id_produk', 'id_produk');
     }
 
     /**
@@ -127,7 +131,8 @@ class Product extends Model
      */
     public function getFormattedPriceAttribute(): string
     {
-        return 'Rp '.number_format((float) $this->harga_sewa, 0, ',', '.').' / hari';
+        $price = $this->lowest_duration_price ?? $this->durations()->min('harga') ?? 0;
+        return 'Mulai Rp '.number_format((float) $price, 0, ',', '.');
     }
 
     /**

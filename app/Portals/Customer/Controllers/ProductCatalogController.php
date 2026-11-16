@@ -39,6 +39,7 @@ class ProductCatalogController extends Controller
 
         // Query produk lintas tenant
         $query = Produk::with(['tenant', 'galeri', 'kategori'])
+            ->withMin('durasi as lowest_duration_price', 'harga')
             ->withAvg('reviews as avg_rating', 'rating_nilai')
             ->withCount(['reviews', 'pemesanans']);
 
@@ -69,23 +70,23 @@ class ProductCatalogController extends Controller
         // 3. Filter Rentang Harga Sewa (Preset Radio atau Input Min/Max)
         if ($request->filled('harga_preset')) {
             match ($request->harga_preset) {
-                'under_300k' => $query->where('harga_sewa', '<', 300000),
-                '300k_1m' => $query->whereBetween('harga_sewa', [300000, 1000000]),
-                '1m_3m' => $query->whereBetween('harga_sewa', [1000000, 3000000]),
-                'above_3m' => $query->where('harga_sewa', '>', 3000000),
+                'under_300k' => $query->whereHas('durasi', fn ($q) => $q->where('harga', '<', 300000)),
+                '300k_1m' => $query->whereHas('durasi', fn ($q) => $q->whereBetween('harga', [300000, 1000000])),
+                '1m_3m' => $query->whereHas('durasi', fn ($q) => $q->whereBetween('harga', [1000000, 3000000])),
+                'above_3m' => $query->whereHas('durasi', fn ($q) => $q->where('harga', '>', 3000000)),
                 default => null,
             };
         } else {
             if ($request->filled('min_harga')) {
                 $minVal = (int) preg_replace('/\D/', '', $request->min_harga);
                 if ($minVal > 0) {
-                    $query->where('harga_sewa', '>=', $minVal);
+                    $query->whereHas('durasi', fn ($q) => $q->where('harga', '>=', $minVal));
                 }
             }
             if ($request->filled('max_harga')) {
                 $maxVal = (int) preg_replace('/\D/', '', $request->max_harga);
                 if ($maxVal > 0) {
-                    $query->where('harga_sewa', '<=', $maxVal);
+                    $query->whereHas('durasi', fn ($q) => $q->where('harga', '<=', $maxVal));
                 }
             }
         }
@@ -100,8 +101,8 @@ class ProductCatalogController extends Controller
 
         // 5. Urutan Tampilan
         match ($request->get('sort', 'populer')) {
-            'termurah' => $query->orderBy('harga_sewa', 'asc'),
-            'termahal' => $query->orderBy('harga_sewa', 'desc'),
+            'termurah' => $query->orderBy('lowest_duration_price', 'asc'),
+            'termahal' => $query->orderBy('lowest_duration_price', 'desc'),
             'terbaru' => $query->orderBy('created_at', 'desc'),
             default => $query->orderBy('id_produk', 'asc'),
         };

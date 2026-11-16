@@ -157,7 +157,7 @@
                             <div>
                                 <span class="text-[10px] text-gray-400 block">Tarif Sewa</span>
                                 <span class="text-xs font-bold text-[#000000]">
-                                    Rp {{ number_format($produk->harga_sewa, 0, ',', '.') }} <span class="text-[10px] text-gray-500 font-normal">/ hari</span>
+                                    Mulai Rp {{ number_format($produk->harga_mulai, 0, ',', '.') }} <span class="text-[10px] text-gray-500 font-normal">/ durasi</span>
                                 </span>
                             </div>
 

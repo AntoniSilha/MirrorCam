@@ -98,15 +98,7 @@ class GetCustomerOrdersUseCase
                 ->whereIn('id_ktp', $ktpIds)
                 ->get();
 
-            if ($dbOrders->isNotEmpty()) {
-                return $dbOrders;
-            }
-
-            // Fallback to all orders in database if this user doesn't have an order yet
-            $allDbOrders = \App\Models\DetailPemesananTenant::with(['tenant', 'produk.galeri'])->get();
-            if ($allDbOrders->isNotEmpty()) {
-                return $allDbOrders;
-            }
+            return $dbOrders;
         }
 
         if (Schema::hasTable('bookings')) {
@@ -114,12 +106,10 @@ class GetCustomerOrdersUseCase
                 ->where('user_id', $user->getKey())
                 ->get();
 
-            if ($dbOrders->isNotEmpty()) {
-                return $dbOrders;
-            }
+            return $dbOrders;
         }
 
-        return $this->getMockOrders();
+        return collect();
     }
 
     /**
