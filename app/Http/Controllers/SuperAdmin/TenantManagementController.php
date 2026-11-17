@@ -80,7 +80,7 @@ class TenantManagementController extends Controller
             'nama_bank' => ['nullable', 'string', 'max:50'],
             'nomor_rekening' => ['nullable', 'string', 'max:50'],
             'nama_pemilik_rekening' => ['nullable', 'string', 'max:100'],
-            'status_mitra' => ['nullable', 'string', 'in:aktif,Menunggu Verifikasi'],
+            'status_mitra' => ['nullable', 'string', 'in:aktif,verified,noverified,Menunggu Verifikasi'],
         ]);
 
         $tenant = $this->tenantApprovalService->createManualTenant($validated);

@@ -147,7 +147,7 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse ($tenants as $tenant)
                         @php
-                            $isAktif = strtolower($tenant->status_mitra ?? '') === 'aktif';
+                            $isAktif = in_array(strtolower($tenant->status_mitra ?? ''), ['aktif', 'verified']);
                         @endphp
                         <tr class="hover:bg-[#fafafa] transition">
                             <!-- Kolom 1: Toko & ID Mitra -->

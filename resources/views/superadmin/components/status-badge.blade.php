@@ -4,7 +4,7 @@
     $cleanStatus = strtolower(trim((string) $status));
     $label = ucfirst($cleanStatus);
 
-    if (str_contains($cleanStatus, 'aktif')) {
+    if (str_contains($cleanStatus, 'aktif') || $cleanStatus === 'verified') {
         $classes = 'bg-[#dcfce7] text-[#16a34a]';
         $dotClass = 'bg-[#16a34a]';
         $label = 'AKTIF';
@@ -16,7 +16,7 @@
         $classes = 'bg-[#ffdad6] text-[#ba1a1a]';
         $dotClass = 'bg-[#ba1a1a]';
         $label = str_contains($cleanStatus, 'suspend') || str_contains($cleanStatus, 'tangguh') ? 'Ditangguhkan' : 'Terlambat';
-    } elseif (str_contains($cleanStatus, 'verifikasi') || str_contains($cleanStatus, 'validasi') || str_contains($cleanStatus, 'pending')) {
+    } elseif (str_contains($cleanStatus, 'verifikasi') || str_contains($cleanStatus, 'validasi') || str_contains($cleanStatus, 'pending') || $cleanStatus === 'noverified') {
         $classes = 'bg-[#fef3c7] text-[#b45309]';
         $dotClass = 'bg-[#b45309]';
         $label = 'Menunggu Validasi';

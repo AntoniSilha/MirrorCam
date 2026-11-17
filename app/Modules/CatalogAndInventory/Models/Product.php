@@ -2,11 +2,15 @@
 
 namespace App\Modules\CatalogAndInventory\Models;
 
+use App\Models\DetailPemesananTenant;
+use App\Models\DurasiProduk;
 use App\Models\GaleriFotoProduk;
+use App\Models\ReviewUlasanTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 /**
  * @property int $id_produk
@@ -15,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $nama_produk
  * @property string|null $color_produk
  * @property string $deskripsi_lengkap
- * @property float $harga_sewa
+ * @property float|null $lowest_duration_price
  * @property int $total_stock_unit
  * @property string|null $thumbnail_url
  * @property float|null $rating
@@ -37,7 +41,6 @@ class Product extends Model
         'nama_produk',
         'color_produk',
         'deskripsi_lengkap',
-        'harga_sewa',
         'total_stock_unit',
         'thumbnail_url',
         'rating',
@@ -45,7 +48,6 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'harga_sewa' => 'decimal:2',
         'total_stock_unit' => 'integer',
         'rating' => 'float',
         'review_count' => 'integer',
@@ -81,6 +83,38 @@ class Product extends Model
         return $this->hasMany(GaleriFotoProduk::class, 'id_produk', 'id_produk');
     }
 
+    public function durations(): HasMany
+    {
+        return $this->hasMany(DurasiProduk::class, 'id_produk', 'id_produk');
+    }
+
+    /**
+     * Bookings that include this product.
+     *
+     * @return HasMany<DetailPemesananTenant, $this>
+     */
+    public function pemesanans(): HasMany
+    {
+        return $this->hasMany(DetailPemesananTenant::class, 'id_produk', 'id_produk');
+    }
+
+    /**
+     * Reviews submitted for bookings of this product.
+     *
+     * @return HasManyThrough<ReviewUlasanTenant, DetailPemesananTenant, $this>
+     */
+    public function reviews(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            ReviewUlasanTenant::class,
+            DetailPemesananTenant::class,
+            'id_produk',
+            'id_pemesanan',
+            'id_produk',
+            'id_pemesanan'
+        );
+    }
+
     /**
      * Scope for products with stock
      *
@@ -97,7 +131,9 @@ class Product extends Model
      */
     public function getFormattedPriceAttribute(): string
     {
-        return 'Rp '.number_format((float) $this->harga_sewa, 0, ',', '.').' / hari';
+        $price = $this->lowest_duration_price ?? $this->durations()->min('harga') ?? ($this->harga_sewa ?? 0);
+
+        return 'Mulai Rp '.number_format((float) $price, 0, ',', '.');
     }
 
     /**
@@ -121,7 +157,15 @@ class Product extends Model
      */
     public function getRatingDisplayAttribute(): string
     {
-        return number_format((float) ($this->rating ?? 4.9), 1, '.', '');
+        $average = $this->attributes['avg_rating']
+            ?? $this->attributes['reviews_avg_rating_nilai']
+            ?? null;
+
+        if ($average === null && $this->relationLoaded('reviews')) {
+            $average = $this->reviews->avg('rating_nilai');
+        }
+
+        return number_format((float) ($average ?? 0), 1, '.', '');
     }
 
     /**
@@ -129,6 +173,15 @@ class Product extends Model
      */
     public function getReviewCountDisplayAttribute(): int
     {
-        return $this->review_count ?? 24;
+        return (int) ($this->reviews_count
+            ?? ($this->relationLoaded('reviews') ? $this->reviews->count() : 0));
+    }
+
+    /**
+     * Booking count display
+     */
+    public function getBookingCountDisplayAttribute(): int
+    {
+        return (int) ($this->pemesanans_count ?? 0);
     }
 }

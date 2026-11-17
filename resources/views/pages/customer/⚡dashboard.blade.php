@@ -50,8 +50,8 @@ new #[Title('Data Pesanan - MirrorCam')] #[Layout('components.layouts.user-dashb
 
         return [
             'semua' => (clone $orders)->count(),
-            'sedang_disewa' => (clone $orders)->where('status_sewa', 'Sedang Disewa')->count(),
-            'selesai' => (clone $orders)->where('status_sewa', 'Selesai')->count(),
+            'sedang_disewa' => $this->activeStatusQuery(clone $orders)->count(),
+            'selesai' => $this->completedStatusQuery(clone $orders)->count(),
         ];
     }
 
@@ -61,9 +61,9 @@ new #[Title('Data Pesanan - MirrorCam')] #[Layout('components.layouts.user-dashb
         $query = DetailPemesananTenant::query()->whereIn('id_ktp', $this->customerKtpIds());
 
         if ($this->activeFilter === 'sedang_disewa') {
-            $query->where('status_sewa', 'Sedang Disewa');
+            $this->activeStatusQuery($query);
         } elseif ($this->activeFilter === 'selesai') {
-            $query->where('status_sewa', 'Selesai');
+            $this->completedStatusQuery($query);
         }
 
         $query->orderBy('waktu_ambil_booking', $this->activeSort === 'terlama' ? 'asc' : 'desc');
@@ -148,6 +148,20 @@ new #[Title('Data Pesanan - MirrorCam')] #[Layout('components.layouts.user-dashb
             str_contains($normalized, 'terlambat') => 'terlambat',
             default => 'booking_aktif',
         };
+    }
+
+    protected function activeStatusQuery($query)
+    {
+        return $query->whereRaw("LOWER(REPLACE(status_sewa, ' ', '_')) IN (?, ?, ?)", [
+            'sedang_disewa', 'booking_aktif', 'active',
+        ]);
+    }
+
+    protected function completedStatusQuery($query)
+    {
+        return $query->whereRaw("LOWER(REPLACE(status_sewa, ' ', '_')) IN (?, ?)", [
+            'selesai', 'completed',
+        ]);
     }
 
     protected function formatDate(mixed $value): string

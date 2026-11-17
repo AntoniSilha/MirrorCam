@@ -35,7 +35,9 @@ class SearchCatalogUseCase
         $type = $filters['type'] ?? 'all';
 
         if (Schema::hasTable('produks')) {
-            $query = Product::with(['tenant', 'category', 'gallery']);
+            $query = Product::with(['tenant', 'category', 'gallery'])
+                ->withAvg('reviews as avg_rating', 'rating_nilai')
+                ->withCount(['reviews', 'pemesanans']);
 
             if (! empty($keyword)) {
                 $query->where(function ($q) use ($keyword) {

@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Portals\Customer\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Services\TenantDirectoryService;
 use Illuminate\Contracts\View\View;
@@ -46,8 +47,15 @@ class TenantController extends Controller
             'detailOperasional',
             'produks.kategori',
             'produks.galeri',
+            'produks.durasi',
             'reviews.penyewa',
         ]);
+
+        $tenant->produks->loadAvg('reviews', 'rating_nilai');
+        $tenant->produks->loadCount(['reviews', 'pemesanans']);
+
+        $tenant->loadAvg('reviews', 'rating_nilai');
+        $tenant->loadCount(['reviews', 'pemesanans']);
 
         return view('customer.tenant.show', [
             'tenant' => $tenant,

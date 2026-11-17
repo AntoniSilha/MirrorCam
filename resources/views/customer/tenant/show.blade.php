@@ -34,10 +34,14 @@
                             <span class="bg-[#f0f0f0] text-[#000000] text-[9.5px] font-bold tracking-wider px-2.5 py-1 rounded-[4px] uppercase">
                                 OFFICIAL PARTNER
                             </span>
+                            <span class="bg-[#dcfce7] text-[#16a34a] text-[9.5px] font-bold tracking-wider px-2.5 py-1 rounded-[4px] uppercase">
+                                TERVERIFIKASI
+                            </span>
+                        @else
+                            <span class="bg-amber-50 text-amber-800 text-[9.5px] font-bold tracking-wider px-2.5 py-1 rounded-[4px] uppercase">
+                                BELUM TERVERIFIKASI
+                            </span>
                         @endif
-                        <span class="bg-[#dcfce7] text-[#16a34a] text-[9.5px] font-bold tracking-wider px-2.5 py-1 rounded-[4px] uppercase">
-                            AKTIF
-                        </span>
                     </div>
 
                     <p class="text-xs text-gray-500 font-medium">
@@ -153,13 +157,13 @@
                             <div>
                                 <span class="text-[10px] text-gray-400 block">Tarif Sewa</span>
                                 <span class="text-xs font-bold text-[#000000]">
-                                    Rp {{ number_format($produk->harga_sewa, 0, ',', '.') }} <span class="text-[10px] text-gray-500 font-normal">/ hari</span>
+                                    Mulai Rp {{ number_format($produk->harga_mulai, 0, ',', '.') }} <span class="text-[10px] text-gray-500 font-normal">/ durasi</span>
                                 </span>
                             </div>
 
-                            <button type="button" class="bg-[#000000] text-[#ffffff] text-xs font-semibold px-3 py-1.5 rounded-[4px] hover:bg-neutral-800 transition">
-                                Detail Gear
-                            </button>
+                            <a href="{{ route('produk.show', $produk->id_produk) }}" class="bg-[#000000] text-[#ffffff] text-xs font-semibold px-3 py-1.5 rounded-[4px] hover:bg-neutral-800 transition">
+                                Detail
+                            </a>
                         </div>
                     </div>
                 @endforeach

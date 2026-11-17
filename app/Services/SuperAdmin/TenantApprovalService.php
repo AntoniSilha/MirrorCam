@@ -54,14 +54,18 @@ class TenantApprovalService
         // Tab counts
         $totalAll = Tenant::count();
         $totalMenunggu = Tenant::where(function (Builder $q) {
-            $q->where('status_mitra', 'like', '%verifikasi%')
+            $q->where('status_mitra', 'noverified')
+                ->orWhere('status_mitra', 'like', '%verifikasi%')
                 ->orWhere('status_mitra', 'like', '%validasi%')
                 ->orWhere('status_mitra', 'like', '%pending%')
                 ->orWhere('status_mitra', 'Menunggu Verifikasi');
         })->count();
 
         $totalAktif = Tenant::where(function (Builder $q) {
-            $q->where('status_mitra', 'aktif')->orWhere('status_mitra', 'Aktif');
+            $q->where('status_mitra', 'verified')
+                ->orWhere('status_mitra', 'aktif')
+                ->orWhere('status_mitra', 'Aktif')
+                ->orWhere('status_mitra', 'official');
         })->count();
 
         $totalSuspend = Tenant::where(function (Builder $q) {
@@ -79,14 +83,18 @@ class TenantApprovalService
         // Apply Tab Filter
         if ($activeTab === 'menunggu_validasi' || $activeTab === 'menunggu') {
             $query->where(function (Builder $q) {
-                $q->where('status_mitra', 'like', '%verifikasi%')
+                $q->where('status_mitra', 'noverified')
+                    ->orWhere('status_mitra', 'like', '%verifikasi%')
                     ->orWhere('status_mitra', 'like', '%validasi%')
                     ->orWhere('status_mitra', 'like', '%pending%')
                     ->orWhere('status_mitra', 'Menunggu Verifikasi');
             });
         } elseif ($activeTab === 'mitra_aktif' || $activeTab === 'aktif') {
             $query->where(function (Builder $q) {
-                $q->where('status_mitra', 'aktif')->orWhere('status_mitra', 'Aktif');
+                $q->where('status_mitra', 'verified')
+                    ->orWhere('status_mitra', 'aktif')
+                    ->orWhere('status_mitra', 'Aktif')
+                    ->orWhere('status_mitra', 'official');
             });
         } elseif ($activeTab === 'ditangguhkan' || $activeTab === 'suspend') {
             $query->where(function (Builder $q) {
@@ -167,7 +175,8 @@ class TenantApprovalService
         $tenant = Tenant::findOrFail($id);
         $oldStatus = $tenant->status_mitra;
 
-        $tenant->update(['status_mitra' => 'aktif']);
+        $newStatus = 'verified';
+        $tenant->update(['status_mitra' => $newStatus]);
 
         AuditLog::record(
             action: 'tenant_approved',
@@ -177,7 +186,7 @@ class TenantApprovalService
                 'id_tenant' => $tenant->id_tenant,
                 'nama_toko' => $tenant->nama_toko,
                 'old_status' => $oldStatus,
-                'new_status' => 'aktif',
+                'new_status' => $newStatus,
             ]
         );
 
@@ -193,7 +202,8 @@ class TenantApprovalService
         $oldStatus = $tenant->status_mitra;
         $justification = $reason ?: 'Pelanggaran ketentuan operasional atau penangguhan administratif platform';
 
-        $tenant->update(['status_mitra' => 'ditangguhkan']);
+        $newStatus = 'noverified';
+        $tenant->update(['status_mitra' => $newStatus]);
 
         AuditLog::record(
             action: 'tenant_suspended',
@@ -203,7 +213,7 @@ class TenantApprovalService
                 'id_tenant' => $tenant->id_tenant,
                 'nama_toko' => $tenant->nama_toko,
                 'old_status' => $oldStatus,
-                'new_status' => 'ditangguhkan',
+                'new_status' => $newStatus,
                 'alasan' => $justification,
             ]
         );
@@ -246,6 +256,9 @@ class TenantApprovalService
                 $fullAddress .= ', '.$city;
             }
 
+            $rawStatus = strtolower($data['status_mitra'] ?? 'verified');
+            $statusMitra = in_array($rawStatus, ['aktif', 'verified', 'official'], true) ? 'verified' : 'noverified';
+
             $tenant = Tenant::create([
                 'google_id_token' => $user->id_user_google,
                 'id_akun_pemilik' => $user->id_akun,
@@ -256,7 +269,7 @@ class TenantApprovalService
                 'jabatan_penanggungjawab' => $data['jabatan_penanggungjawab'] ?? 'Manager Operasional',
                 'email_resmi' => $email,
                 'alamat_toko' => $fullAddress,
-                'status_mitra' => $data['status_mitra'] ?? 'aktif',
+                'status_mitra' => $statusMitra,
             ]);
 
             DetailOperasionalTenant::create([

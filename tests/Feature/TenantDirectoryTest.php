@@ -41,7 +41,7 @@ function helperCreateUser(string $name = 'User Test', string $role = 'user'): Us
     return $user;
 }
 
-function helperCreateTenant(string $name, string $city = 'Jakarta', string $status = 'aktif'): Tenant
+function helperCreateTenant(string $name, string $city = 'Jakarta', string $status = 'verified'): Tenant
 {
     $owner = helperCreateUser('Owner '.$name, 'mitra');
 
@@ -92,7 +92,7 @@ it('displays empty state when no active tenants are present in database', functi
 });
 
 it('displays active tenants dynamically from database', function () {
-    $tenant = helperCreateTenant('Indonesia Gallery', 'Banyuwangi', 'aktif');
+    $tenant = helperCreateTenant('Indonesia Gallery', 'Banyuwangi', 'verified');
 
     $category = KategoriProduk::create([
         'id_kategori' => 1,
@@ -104,7 +104,6 @@ it('displays active tenants dynamically from database', function () {
         'id_kategori' => $category->id_kategori,
         'nama_produk' => 'Sony FX3 Cinema Line',
         'deskripsi_lengkap' => 'Cinema line full frame kamera',
-        'harga_sewa' => 750000,
         'total_stock_unit' => 12,
     ]);
 
@@ -121,10 +120,10 @@ it('displays active tenants dynamically from database', function () {
     $response->assertSee(route('tenant.show', $tenant->slug));
 });
 
-it('excludes non-active tenants from public exploration (SRS UC-02 & UC-23)', function () {
-    $activeTenant = helperCreateTenant('Toko Aktif Jaya', 'Surabaya', 'aktif');
-    $pendingTenant = helperCreateTenant('Toko Pending', 'Bandung', 'Menunggu Verifikasi');
-    $inactiveTenant = helperCreateTenant('Toko Nonaktif', 'Medan', 'nonaktif');
+it('excludes unverified tenants from public exploration (SRS UC-02 & UC-23)', function () {
+    $activeTenant = helperCreateTenant('Toko Aktif Jaya', 'Surabaya', 'verified');
+    $pendingTenant = helperCreateTenant('Toko Pending', 'Bandung', 'noverified');
+    $inactiveTenant = helperCreateTenant('Toko Nonaktif', 'Medan', 'noverified');
 
     $response = $this->get(route('tenant.index'));
 
@@ -135,25 +134,23 @@ it('excludes non-active tenants from public exploration (SRS UC-02 & UC-23)', fu
 });
 
 it('dynamically determines service category subtitle based on products', function () {
-    $tenantPhysicalOnly = helperCreateTenant('Focus Gear', 'Yogyakarta', 'aktif');
+    $tenantPhysicalOnly = helperCreateTenant('Focus Gear', 'Yogyakarta', 'verified');
     $categoryCamera = KategoriProduk::create(['id_kategori' => 10, 'nama_kategori' => 'Kamera']);
     helperCreateProduct([
         'id_tenant' => $tenantPhysicalOnly->id_tenant,
         'id_kategori' => $categoryCamera->id_kategori,
         'nama_produk' => 'Canon EOS R5',
         'deskripsi_lengkap' => 'Mirrorless 8K',
-        'harga_sewa' => 500000,
         'total_stock_unit' => 5,
     ]);
 
-    $tenantWithStudio = helperCreateTenant('Sun Creative Studio', 'Semarang', 'aktif');
+    $tenantWithStudio = helperCreateTenant('Sun Creative Studio', 'Semarang', 'verified');
     $categoryStudio = KategoriProduk::create(['id_kategori' => 11, 'nama_kategori' => 'Studio Editing']);
     helperCreateProduct([
         'id_tenant' => $tenantWithStudio->id_tenant,
         'id_kategori' => $categoryStudio->id_kategori,
         'nama_produk' => 'Mac Studio M2 Max Suite',
         'deskripsi_lengkap' => 'Studio pasca-produksi',
-        'harga_sewa' => 1500000,
         'total_stock_unit' => 2,
     ]);
 
@@ -167,8 +164,8 @@ it('dynamically determines service category subtitle based on products', functio
 });
 
 it('filters tenants dynamically by search keyword', function () {
-    helperCreateTenant('Indonesia Gallery', 'Banyuwangi', 'aktif');
-    helperCreateTenant('Indo Project', 'Jakarta', 'aktif');
+    helperCreateTenant('Indonesia Gallery', 'Banyuwangi', 'verified');
+    helperCreateTenant('Indo Project', 'Jakarta', 'verified');
 
     $responseSearchBanyuwangi = $this->get(route('tenant.index', ['search' => 'Banyuwangi']));
     $responseSearchBanyuwangi->assertStatus(200);
@@ -183,8 +180,8 @@ it('filters tenants dynamically by search keyword', function () {
 
 it('filters tenants dynamically by rating pill', function () {
     $customer = helperCreateUser('Customer Ulasan');
-    $tenantHigh = helperCreateTenant('Toko Bintang Lima', 'Malang', 'aktif');
-    $tenantLow = helperCreateTenant('Toko Bintang Tiga', 'Solo', 'aktif');
+    $tenantHigh = helperCreateTenant('Toko Bintang Lima', 'Malang', 'verified');
+    $tenantLow = helperCreateTenant('Toko Bintang Tiga', 'Solo', 'verified');
 
     $cat = KategoriProduk::create(['id_kategori' => 20, 'nama_kategori' => 'Kamera']);
     $prod1 = helperCreateProduct([
@@ -192,7 +189,6 @@ it('filters tenants dynamically by rating pill', function () {
         'id_kategori' => $cat->id_kategori,
         'nama_produk' => 'Kamera A',
         'deskripsi_lengkap' => 'Deskripsi',
-        'harga_sewa' => 100000,
         'total_stock_unit' => 1,
     ]);
     $prod2 = helperCreateProduct([
@@ -200,7 +196,6 @@ it('filters tenants dynamically by rating pill', function () {
         'id_kategori' => $cat->id_kategori,
         'nama_produk' => 'Kamera B',
         'deskripsi_lengkap' => 'Deskripsi',
-        'harga_sewa' => 100000,
         'total_stock_unit' => 1,
     ]);
 
@@ -261,7 +256,7 @@ it('filters tenants dynamically by rating pill', function () {
 
 it('shows load more button when remaining tenants > 0 and hides when <= 9', function () {
     for ($i = 1; $i <= 11; $i++) {
-        helperCreateTenant("Mitra Tenant Ke-{$i}", 'Jakarta', 'aktif');
+        helperCreateTenant("Mitra Tenant Ke-{$i}", 'Jakarta', 'verified');
     }
 
     // Default per_page is 9, so 11 - 9 = 2 remaining
@@ -276,7 +271,7 @@ it('shows load more button when remaining tenants > 0 and hides when <= 9', func
 });
 
 it('displays tenant detail page at /tenant/{slug}', function () {
-    $tenant = helperCreateTenant('Indonesia Gallery', 'Banyuwangi', 'aktif');
+    $tenant = helperCreateTenant('Indonesia Gallery', 'Banyuwangi', 'verified');
 
     $response = $this->get(route('tenant.show', $tenant->slug));
 
@@ -287,9 +282,9 @@ it('displays tenant detail page at /tenant/{slug}', function () {
     $response->assertSee('Kembali ke Eksplorasi Tenant');
 });
 
-it('returns 404 for non-existent slug or inactive tenant', function () {
-    $inactive = helperCreateTenant('Toko Nonaktif', 'Padang', 'nonaktif');
+it('returns 404 for non-existent slug and still shows unverified tenant detail', function () {
+    $unverified = helperCreateTenant('Toko Belum Verifikasi', 'Padang', 'noverified');
 
     $this->get(route('tenant.show', 'unknown-slug'))->assertStatus(404);
-    $this->get(route('tenant.show', $inactive->slug))->assertStatus(404);
+    $this->get(route('tenant.show', $unverified->slug))->assertStatus(200);
 });

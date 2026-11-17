@@ -56,7 +56,7 @@ function createTestTenant(string $shopName = 'Indo Project'): Tenant
         'jabatan_penanggungjawab' => 'Manager',
         'email_resmi' => 'shop@example.com',
         'alamat_toko' => 'Jl. Sudirman No. 1, Jakarta',
-        'status_mitra' => 'official',
+        'status_mitra' => 'verified',
     ]);
 }
 

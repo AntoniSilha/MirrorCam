@@ -28,6 +28,21 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
     public bool $showProductModal = false;
 
+    public bool $showEditProductModal = false;
+
+    public ?int $editingProductId = null;
+
+    public string $editNamaProduk = '';
+
+    public array $editColorProduk = [];
+
+    public string $editStokProduk = '0';
+
+    /** @var array<string, string> */
+    public array $editHargaDurasi = [];
+
+    public array $editFotos = [];
+
     public bool $autoAcceptBooking = true;
 
     public bool $maintenanceMode = false;
@@ -35,8 +50,6 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
     public string $nama_produk = '';
 
     public string $id_kategori = '';
-
-    public string $harga_sewa = '';
 
     public string $total_stock_unit = '1';
 
@@ -162,7 +175,105 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
      */
     public function colorOptions(): array
     {
-        return ['Black', 'Grey', 'Red', 'White', 'Silver'];
+        return ['Black', 'White', 'Grey', 'Silver', 'Red', 'Maroon', 'Orange', 'Yellow', 'Gold', 'Green', 'Olive', 'Teal', 'Cyan', 'Blue', 'Navy', 'Purple', 'Violet', 'Pink', 'Brown', 'Beige', 'Cream', 'Rose Gold'];
+    }
+
+    /** @return array<string, string> */
+    public function colorSwatches(): array
+    {
+        return [
+            'Black' => '#111827', 'White' => '#ffffff', 'Grey' => '#9ca3af', 'Silver' => '#d1d5db',
+            'Red' => '#ef4444', 'Maroon' => '#7f1d1d', 'Orange' => '#f97316', 'Yellow' => '#facc15',
+            'Gold' => '#d4af37', 'Green' => '#22c55e', 'Olive' => '#808000', 'Teal' => '#14b8a6',
+            'Cyan' => '#06b6d4', 'Blue' => '#3b82f6', 'Navy' => '#1e3a8a', 'Purple' => '#8b5cf6',
+            'Violet' => '#7c3aed', 'Pink' => '#ec4899', 'Brown' => '#92400e', 'Beige' => '#d6c4a1',
+            'Cream' => '#fff7d6', 'Rose Gold' => '#b76e79',
+        ];
+    }
+
+    public function editProduct(int $productId): void
+    {
+        $tenant = Tenant::query()->where('id_akun_pemilik', Auth::user()->id_akun)->first();
+        $product = Produk::query()->where('id_tenant', $tenant?->id_tenant)->findOrFail($productId);
+        $product->load('durasi');
+
+        $this->resetValidation();
+        $this->editingProductId = $product->id_produk;
+        $this->editNamaProduk = $product->nama_produk;
+        $existingColors = array_filter(array_map('trim', explode(',', (string) $product->color_produk)));
+        $this->editColorProduk = array_values(array_filter(array_map(
+            fn ($color) => collect($this->colorOptions())->first(fn ($option) => strtolower($option) === strtolower($color)),
+            $existingColors
+        )));
+        $this->editStokProduk = (string) $product->total_stock_unit;
+        $this->editHargaDurasi = $this->emptyHargaDurasi();
+        foreach ($product->durasi as $durasi) {
+            if (array_key_exists($durasi->durasi, $this->editHargaDurasi)) {
+                $this->editHargaDurasi[$durasi->durasi] = (string) $durasi->harga;
+            }
+        }
+        $this->editFotos = [];
+        $this->showEditProductModal = true;
+    }
+
+    public function updateProduct(): void
+    {
+        $validated = $this->validate([
+            'editingProductId' => ['required', 'integer'],
+            'editNamaProduk' => ['required', 'string', 'max:120'],
+            'editColorProduk' => ['array'],
+            'editColorProduk.*' => ['string', Rule::in($this->colorOptions())],
+            'editStokProduk' => ['required', 'integer', 'min:0'],
+            'editHargaDurasi' => ['required', 'array'],
+            'editHargaDurasi.*' => ['nullable', 'numeric', 'min:0'],
+            'editFotos' => ['array', 'max:8'],
+            'editFotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+
+        $tenant = Tenant::query()->where('id_akun_pemilik', Auth::user()->id_akun)->firstOrFail();
+        $product = Produk::query()->where('id_tenant', $tenant->id_tenant)->findOrFail($validated['editingProductId']);
+        $prices = array_filter($validated['editHargaDurasi'], fn ($price) => $price !== null && $price !== '');
+        if ($prices === []) {
+            $this->addError('editHargaDurasi', 'Isi harga untuk minimal satu durasi.');
+            return;
+        }
+        DB::transaction(function () use ($product, $validated, $prices): void {
+            $product->update([
+                'nama_produk' => $validated['editNamaProduk'],
+                'color_produk' => ! empty($validated['editColorProduk']) ? implode(', ', $validated['editColorProduk']) : null,
+                'total_stock_unit' => (int) $validated['editStokProduk'],
+            ]);
+
+            $product->durasi()->delete();
+            foreach ($prices as $code => $price) {
+                DurasiProduk::query()->create([
+                    'id_produk' => $product->id_produk,
+                    'durasi' => $code,
+                    'nama_durasi' => $this->durasiOptions()[$code],
+                    'harga' => $price,
+                ]);
+            }
+
+            if ($this->editFotos !== []) {
+                $product->galeri()->delete();
+
+                foreach ($this->editFotos as $foto) {
+                    $path = $foto->store('produk', 'public');
+                    if ($path) {
+                        GaleriFotoProduk::query()->create([
+                            'id_produk' => $product->id_produk,
+                            'url_foto_produk' => Storage::disk('public')->url($path),
+                        ]);
+                    }
+                }
+            }
+        });
+
+        $this->showEditProductModal = false;
+        $this->editingProductId = null;
+        $this->editFotos = [];
+        unset($this->dashboard, $this->chart);
+        session()->flash('status', 'Produk berhasil diperbarui.');
     }
 
     /**
@@ -226,7 +337,6 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $this->resetValidation();
         $this->nama_produk = '';
         $this->id_kategori = '';
-        $this->harga_sewa = '';
         $this->total_stock_unit = '1';
         $this->deskripsi_lengkap = '';
         $this->color_produk = [];
@@ -264,7 +374,6 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $rules = [
             'nama_produk' => ['required', 'string', 'max:120'],
             'id_kategori' => ['required', 'exists:kategori_produk,id_kategori'],
-            'harga_sewa' => ['required', 'numeric', 'min:0'],
             'total_stock_unit' => ['required', 'integer', 'min:0'],
             'deskripsi_lengkap' => ['nullable', 'string', 'max:1000'],
             'color_produk' => ['array'],
@@ -288,14 +397,14 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
             'harga_durasi.*.min' => 'Harga durasi tidak boleh negatif.',
         ]);
 
-        DB::transaction(function () use ($tenant, $validated): void {
+        $warnaProduk = array_values(array_unique($validated['color_produk'] ?? []));
+        DB::transaction(function () use ($tenant, $validated, $warnaProduk): void {
             $produk = Produk::query()->create([
                 'id_tenant' => $tenant->id_tenant,
                 'id_kategori' => (int) $validated['id_kategori'],
                 'nama_produk' => $validated['nama_produk'],
-                'color_produk' => empty($validated['color_produk']) ? null : implode(', ', $validated['color_produk']),
+                'color_produk' => $warnaProduk === [] ? null : implode(', ', $warnaProduk),
                 'deskripsi_lengkap' => $validated['deskripsi_lengkap'] ?: '-',
-                'harga_sewa' => $validated['harga_sewa'],
                 'total_stock_unit' => (int) $validated['total_stock_unit'],
             ]);
 
@@ -328,7 +437,6 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $this->resetValidation();
         $this->nama_produk = '';
         $this->id_kategori = '';
-        $this->harga_sewa = '';
         $this->total_stock_unit = '1';
         $this->deskripsi_lengkap = '';
         $this->color_produk = [];
@@ -758,16 +866,6 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                     <div class="mt-4 space-y-2.5">
                                         <div class="flex items-center justify-between gap-3 rounded-md bg-[#f1f1f1] px-3 py-2.5">
                                             <div class="min-w-0">
-                                                <p class="text-[11px] font-bold text-black">Auto-Accept Booking Standby</p>
-                                                <p class="mt-0.5 text-[9px] leading-relaxed text-neutral-500">Otomatis setujui sewa jika unit berstatus ready</p>
-                                            </div>
-                                            <button type="button" wire:click="toggleAutoAccept" class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition {{ $autoAcceptBooking ? 'bg-black' : 'bg-neutral-300' }}">
-                                                <span class="inline-block h-4 w-4 rounded-full bg-white shadow-xs transition {{ $autoAcceptBooking ? 'translate-x-[18px]' : 'translate-x-0.5' }}"></span>
-                                            </button>
-                                        </div>
-
-                                        <div class="flex items-center justify-between gap-3 rounded-md bg-[#f1f1f1] px-3 py-2.5">
-                                            <div class="min-w-0">
                                                 <p class="text-[11px] font-bold text-black">Mode Libur / Maintenance Toko</p>
                                                 <p class="mt-0.5 text-[9px] leading-relaxed text-neutral-500">Tutup toko sementara</p>
                                             </div>
@@ -824,6 +922,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                         <th class="px-6 py-3 font-semibold">Harga Sewa</th>
                                         <th class="px-6 py-3 font-semibold">Stok</th>
                                         <th class="px-6 py-3 font-semibold">Status</th>
+                                        <th class="px-6 py-3 text-right font-semibold">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-neutral-100">
@@ -841,10 +940,13 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                             <td class="px-6 py-4">
                                                 <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold {{ $this->statusBadgeClasses($product['status']) }}">{{ $product['status'] }}</span>
                                             </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <button type="button" wire:click="editProduct({{ $product['id'] }})" class="rounded-md border border-neutral-300 px-3 py-1.5 text-[10px] font-semibold text-black hover:bg-neutral-100">Edit</button>
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="px-6 py-12 text-center text-xs text-neutral-500">
+                                            <td colspan="6" class="px-6 py-12 text-center text-xs text-neutral-500">
                                                 @if (trim($productSearch) !== '')
                                                     Tidak ada produk yang cocok dengan pencarian "{{ $productSearch }}".
                                                 @else
@@ -1170,7 +1272,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                         @error('nama_produk') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="grid gap-4">
                         <div>
                             <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Kategori</label>
                             <select wire:model="id_kategori" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">
@@ -1182,11 +1284,6 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                             @error('id_kategori') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                         </div>
 
-                        <div>
-                            <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Harga Sewa / Hari</label>
-                            <input type="number" min="0" wire:model="harga_sewa" placeholder="850000" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">
-                            @error('harga_sewa') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
-                        </div>
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-2">
@@ -1223,21 +1320,13 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
                     <div>
                         <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Warna Tersedia</label>
-                        @php
-                            $colorSwatches = [
-                                'Black' => '#000000',
-                                'Grey' => '#9ca3af',
-                                'Red' => '#ef4444',
-                                'White' => '#ffffff',
-                                'Silver' => '#d1d5db',
-                            ];
-                        @endphp
+                        @php($colorSwatches = $this->colorSwatches())
                         <div class="flex flex-wrap gap-2">
                             @foreach ($this->colorOptions() as $color)
-                                <label class="cursor-pointer">
+                                <label class="cursor-pointer" title="{{ $color }}">
                                     <input type="checkbox" wire:model="color_produk" value="{{ $color }}" class="peer sr-only">
-                                    <span class="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 transition peer-checked:border-black peer-checked:bg-black peer-checked:text-white">
-                                        <span class="h-2.5 w-2.5 rounded-full border border-neutral-300" style="background-color: {{ $colorSwatches[$color] ?? '#000000' }}"></span>
+                                    <span class="inline-flex flex-col items-center gap-1 rounded-md border border-neutral-300 bg-white p-1.5 text-[9px] font-semibold text-neutral-700 transition peer-checked:border-black peer-checked:ring-2 peer-checked:ring-black peer-checked:ring-offset-1">
+                                        <span class="h-7 w-7 rounded-full border border-black/20" style="background: {{ $colorSwatches[$color] }}"></span>
                                         {{ $color }}
                                     </span>
                                 </label>
@@ -1280,6 +1369,79 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                     </div>
                 </form>
             </div>
+        </div>
+    @endif
+
+    @if ($showEditProductModal)
+        <div class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 py-6" wire:click.self="$set('showEditProductModal', false)">
+            <form wire:submit="updateProduct" class="max-h-[90vh] w-full max-w-4xl space-y-4 overflow-y-auto rounded-xl bg-white p-5 shadow-xl sm:p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-black">Edit Produk</h3>
+                    <button type="button" wire:click="$set('showEditProductModal', false)" class="text-xl text-neutral-500">&times;</button>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Nama Produk</label>
+                            <input type="text" wire:model="editNamaProduk" class="w-full rounded-md border border-neutral-300 px-3 py-2.5 text-xs focus:border-black focus:ring-1 focus:ring-black">
+                            @error('editNamaProduk') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Stok Unit</label>
+                            <input type="number" min="0" wire:model="editStokProduk" class="w-full rounded-md border border-neutral-300 px-3 py-2.5 text-xs focus:border-black focus:ring-1 focus:ring-black">
+                            @error('editStokProduk') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-[11px] font-semibold text-neutral-700">Harga Sewa per Durasi</label>
+                            <div class="grid gap-2 sm:grid-cols-2">
+                                @foreach ($this->durasiOptions() as $code => $label)
+                                    <label class="flex items-center justify-between gap-2 rounded-md border border-neutral-200 px-3 py-2 text-[11px] text-neutral-700">
+                                        <span>{{ $label }}</span>
+                                        <input type="number" min="0" wire:model="editHargaDurasi.{{ $code }}" placeholder="Tidak tersedia" class="w-28 rounded border border-neutral-300 px-2 py-1 text-right text-xs text-black">
+                                    </label>
+                                @endforeach
+                            </div>
+                            <p class="mt-1 text-[10px] text-neutral-400">Kosongkan durasi yang tidak disewakan.</p>
+                            @error('editHargaDurasi') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="mb-2 block text-[11px] font-semibold text-neutral-700">Warna Produk</label>
+                            @php($editColorSwatches = $this->colorSwatches())
+                            <div class="flex flex-wrap gap-2">
+                                @foreach ($this->colorOptions() as $color)
+                                    <label class="cursor-pointer" title="{{ $color }}">
+                                        <input type="checkbox" wire:model="editColorProduk" value="{{ $color }}" class="peer sr-only">
+                                        <span class="inline-flex flex-col items-center gap-1 rounded-md border border-neutral-300 bg-white p-1.5 text-[9px] font-semibold text-neutral-700 peer-checked:border-black peer-checked:ring-2 peer-checked:ring-black peer-checked:ring-offset-1">
+                                            <span class="h-7 w-7 rounded-full border border-black/20" style="background: {{ $editColorSwatches[$color] }}"></span>{{ $color }}
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <p class="mt-1 text-[10px] text-neutral-400">Pilih satu atau beberapa warna.</p>
+                            @error('editColorProduk.*') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Gambar Produk</label>
+                            <input type="file" wire:model="editFotos" multiple accept="image/png,image/jpeg,image/webp" class="block w-full text-[11px] text-neutral-600">
+                            <p class="mt-1 text-[10px] text-neutral-400">Unggah gambar baru untuk mengganti galeri saat ini (maks. 8 gambar, 4MB per gambar).</p>
+                            @error('editFotos.*') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        @if ($editFotos)
+                            <div class="grid grid-cols-4 gap-2">
+                                @foreach ($editFotos as $foto)
+                                    <img src="{{ $foto->temporaryUrl() }}" alt="Pratinjau gambar" class="aspect-square w-full rounded-md object-cover">
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 border-t border-neutral-100 pt-4">
+                    <button type="button" wire:click="$set('showEditProductModal', false)" class="rounded-md border border-neutral-300 px-4 py-2 text-xs font-semibold">Batal</button>
+                    <button type="submit" wire:loading.attr="disabled" wire:target="updateProduct, editFotos" class="rounded-md bg-black px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">Simpan Perubahan</button>
+                </div>
+            </form>
         </div>
     @endif
 </div>

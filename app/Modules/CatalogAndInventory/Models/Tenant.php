@@ -2,6 +2,7 @@
 
 namespace App\Modules\CatalogAndInventory\Models;
 
+use App\Models\ReviewUlasanTenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -62,6 +63,16 @@ class Tenant extends Model
     }
 
     /**
+     * Reviews and ratings submitted for this tenant.
+     *
+     * @return HasMany<ReviewUlasanTenant, $this>
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ReviewUlasanTenant::class, 'id_tenant', 'id_tenant');
+    }
+
+    /**
      * Owner account relation
      *
      * @return BelongsTo<User, $this>
@@ -103,7 +114,6 @@ class Tenant extends Model
      */
     public function getIsOfficialAttribute(): bool
     {
-        return strtolower($this->status_mitra ?? 'aktif') === 'aktif' ||
-            strtolower($this->status_mitra ?? '') === 'official';
+        return strtolower($this->status_mitra ?? '') === 'verified';
     }
 }

@@ -38,8 +38,12 @@
                 <svg class="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                 </svg>
-                <span class="font-bold text-[#000000]">{{ $product['rating'] }}</span>
-                <span>({{ $product['review_count'] }} ulasan)</span>
+                @if (($product['review_count'] ?? 0) > 0)
+                    <span class="font-bold text-[#000000]">{{ $product['rating'] }}</span>
+                    <span>({{ $product['review_count'] }} ulasan)</span>
+                @else
+                    <span>Belum ada ulasan</span>
+                @endif
             </div>
 
             <!-- Price -->
@@ -54,17 +58,17 @@
 
     <!-- Action Buttons -->
     <div class="grid grid-cols-2 gap-2 mt-4 pt-2 border-t border-[#f0f0f0]">
-        <!-- Detail Gear Button: Background #d9d9d9, Text #000000 -->
+        <!-- Detail Button: Background #d9d9d9, Text #000000 -->
         <a
-            href="{{ route('home', ['keyword' => $product['name']]) }}#katalog"
+            href="{{ route('produk.show', $product['id']) }}"
             class="py-1.5 px-2 bg-[#d9d9d9] hover:bg-[#c7c7c7] text-[#000000] text-center text-xs font-semibold rounded-[4px] transition"
         >
-            Detail Gear
+            Detail
         </a>
 
         <!-- Sewa Button: Background #000000, Text #ffffff -->
         <a
-            href="{{ route('login') }}"
+            href="{{ route('produk.show', $product['id']) }}"
             class="py-1.5 px-2 bg-[#000000] hover:bg-[#222222] text-[#ffffff] text-center text-xs font-bold rounded-[4px] transition shadow-xs"
         >
             Sewa

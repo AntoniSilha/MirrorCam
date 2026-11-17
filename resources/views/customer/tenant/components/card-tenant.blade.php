@@ -28,6 +28,10 @@
                 <span class="bg-[#f0f0f0] text-[#000000] text-[9px] sm:text-[10px] font-bold tracking-wider px-2 py-1 rounded-[4px] uppercase shrink-0 whitespace-nowrap">
                     OFFICIAL PARTNER
                 </span>
+            @else
+                <span class="bg-amber-50 text-amber-800 text-[9px] sm:text-[10px] font-bold tracking-wider px-2 py-1 rounded-[4px] uppercase shrink-0 whitespace-nowrap">
+                    BELUM TERVERIFIKASI
+                </span>
             @endif
         </div>
 

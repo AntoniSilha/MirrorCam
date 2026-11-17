@@ -43,7 +43,7 @@ function helperCreateSuperAdminUser(string $role = 'superadmin'): User
     return $user;
 }
 
-function helperCreateDummyTenant(string $name = 'Jakarta Cine Gear', string $status = 'aktif', string $city = 'Jakarta Selatan'): Tenant
+function helperCreateDummyTenant(string $name = 'Jakarta Cine Gear', string $status = 'verified', string $city = 'Jakarta Selatan'): Tenant
 {
     $owner = helperCreateSuperAdminUser('mitra');
 
@@ -204,14 +204,14 @@ test('superadmin can resolve customer complaint and record audit log', function 
 
 test('superadmin can approve pending tenant and record audit log', function () {
     $superadmin = helperCreateSuperAdminUser('superadmin');
-    $tenant = helperCreateDummyTenant('Bali Prime Camera', 'Menunggu Verifikasi');
+    $tenant = helperCreateDummyTenant('Bali Prime Camera', 'noverified');
 
     $response = $this->actingAs($superadmin)->post("/superadmin/tenant/{$tenant->id_tenant}/approve");
 
     $response->assertRedirect();
     $tenant->refresh();
 
-    expect(strtolower($tenant->status_mitra))->toBe('aktif');
+    expect(strtolower($tenant->status_mitra))->toBe('verified');
 
     $auditLog = AuditLog::where('action', 'tenant_approved')
         ->where('auditable_id', $tenant->id_tenant)
@@ -224,7 +224,7 @@ test('superadmin can approve pending tenant and record audit log', function () {
 
 test('superadmin can suspend tenant with reason and record audit log', function () {
     $superadmin = helperCreateSuperAdminUser('superadmin');
-    $tenant = helperCreateDummyTenant('Surabaya Optics Rental', 'aktif');
+    $tenant = helperCreateDummyTenant('Surabaya Optics Rental', 'verified');
 
     $response = $this->actingAs($superadmin)->post("/superadmin/tenant/{$tenant->id_tenant}/suspend", [
         'alasan' => 'Banyak laporan pelanggan mengenai alat tidak terawat.',
@@ -233,7 +233,7 @@ test('superadmin can suspend tenant with reason and record audit log', function 
     $response->assertRedirect();
     $tenant->refresh();
 
-    expect(strtolower($tenant->status_mitra))->toBe('ditangguhkan');
+    expect(strtolower($tenant->status_mitra))->toBe('noverified');
 
     $auditLog = AuditLog::where('action', 'tenant_suspended')
         ->where('auditable_id', $tenant->id_tenant)
@@ -254,7 +254,7 @@ test('superadmin can manually onboard a tenant and record audit log', function (
         'email_resmi' => 'arya@jogjafilm.id',
         'kota' => 'Sleman, DI Yogyakarta',
         'alamat_toko' => 'Jl. Kaliurang KM 9, Sleman',
-        'status_mitra' => 'aktif',
+        'status_mitra' => 'verified',
         'nama_bank' => 'BCA',
         'nomor_rekening' => '8899001122',
         'nama_pemilik_rekening' => 'Arya Sena',
