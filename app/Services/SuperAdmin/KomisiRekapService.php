@@ -54,7 +54,7 @@ class KomisiRekapService
     /**
      * Retrieve paginated commission records with search
      */
-    public function getKomisiList(array $filters = [], int $perPage = 10): array
+    public function getKomisiList(array $filters = [], int $perPage = 10, int $page = 1): array
     {
         $search = trim($filters['search'] ?? '');
 
@@ -79,7 +79,7 @@ class KomisiRekapService
             });
         }
 
-        $komisiList = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $komisiList = $query->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', max(1, $page));
 
         return [
             'komisiList' => $komisiList,

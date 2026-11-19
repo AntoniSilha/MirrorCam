@@ -8,9 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsMitra
 {
-    /**
-     * Hanya akun mitra (dan superadmin) yang boleh mengakses Dashboard Mitra.
-     */
+    /** Hanya akun mitra yang boleh mengakses dashboard mitra. */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -19,11 +17,17 @@ class EnsureUserIsMitra
             return redirect()->route('login');
         }
 
-        if (! in_array($user->role, ['mitra', 'superadmin'], true)) {
-            return redirect()->route('register.mitra')
-                ->with('status', 'Daftarkan toko Anda terlebih dahulu untuk mengakses Dashboard Mitra.');
+        $role = strtolower($user->role ?? '');
+
+        if ($role === 'mitra') {
+            return $next($request);
         }
 
-        return $next($request);
+        if ($role === 'superadmin') {
+            return redirect()->route('superadmin.dashboard');
+        }
+
+        return redirect()->route('register.mitra')
+            ->with('status', 'Daftarkan toko Anda terlebih dahulu untuk mengakses Dashboard Mitra.');
     }
 }

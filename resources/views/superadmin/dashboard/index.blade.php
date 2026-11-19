@@ -1,9 +1,4 @@
-@extends('superadmin.layouts.app')
-
-@section('title', 'Dashboard & Pusat Aduan — SuperAdmin MirrorCam')
-
-@section('content')
-<div class="space-y-10 sm:space-y-12" x-data="{ resolveModalOpen: false, selectedComplaintId: null, selectedComplaintTicket: '' }">
+<div class="space-y-10 sm:space-y-12">
     <!-- 1. Header Halaman -->
     <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-[#000000] tracking-tight">
@@ -186,24 +181,27 @@
 
             <!-- Filter Tabs -->
             <div class="flex items-center gap-1.5 bg-[#f9f9f9] p-1 border border-gray-200 rounded-[4px]">
-                <a
-                    href="{{ route('superadmin.dashboard', ['status' => 'semua']) }}"
+                <button
+                    type="button"
+                    wire:click="setTab('semua')"
                     class="px-3 py-1.5 text-xs font-semibold rounded-[4px] transition {{ $activeComplaintTab === 'semua' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-gray-600 hover:text-black' }}"
                 >
                     Semua Aduan ({{ $complaintCounts['all'] }})
-                </a>
-                <a
-                    href="{{ route('superadmin.dashboard', ['status' => 'perlu_ditangani']) }}"
+                </button>
+                <button
+                    type="button"
+                    wire:click="setTab('perlu_ditangani')"
                     class="px-3 py-1.5 text-xs font-semibold rounded-[4px] transition {{ $activeComplaintTab === 'perlu_ditangani' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-gray-600 hover:text-black' }}"
                 >
                     Perlu Ditangani ({{ $complaintCounts['perlu'] }})
-                </a>
-                <a
-                    href="{{ route('superadmin.dashboard', ['status' => 'selesai']) }}"
+                </button>
+                <button
+                    type="button"
+                    wire:click="setTab('selesai')"
                     class="px-3 py-1.5 text-xs font-semibold rounded-[4px] transition {{ $activeComplaintTab === 'selesai' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-gray-600 hover:text-black' }}"
                 >
                     Selesai ({{ $complaintCounts['selesai'] }})
-                </a>
+                </button>
             </div>
         </div>
 
@@ -301,7 +299,7 @@
 
                                     <button
                                         type="button"
-                                        @click="resolveModalOpen = true; selectedComplaintId = {{ $aduan->id_pengaduan }}; selectedComplaintTicket = '{{ $aduan->nomor_tiket ?: '#ADU-' . $aduan->id_pengaduan }}'"
+                                        wire:click="openResolve({{ $aduan->id_pengaduan }}, '{{ $aduan->nomor_tiket ?: '#ADU-' . $aduan->id_pengaduan }}')"
                                         class="bg-[#000000] text-[#ffffff] px-4 py-1.5 rounded-[4px] text-xs font-semibold hover:bg-neutral-800 transition shadow-xs"
                                     >
                                         Selesai
@@ -319,7 +317,7 @@
                     Menampilkan {{ $complaints->firstItem() ?? 0 }}-{{ $complaints->lastItem() ?? 0 }} dari {{ $complaints->total() }} laporan aduan
                 </span>
                 <div>
-                    {{ $complaints->appends(request()->query())->links('pagination::simple-tailwind') }}
+                    {{ $complaints->links('pagination::simple-tailwind') }}
                 </div>
             </div>
         @else
@@ -337,75 +335,74 @@
     </div>
 
     <!-- Modal Form Penyelesaian Sengketa (SRS UC-25) -->
-    <div
-        x-show="resolveModalOpen"
-        x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4"
-    >
+    @if ($resolveModalOpen)
         <div
-            @click.away="resolveModalOpen = false"
-            class="bg-[#ffffff] rounded-[4px] border border-[#e5e5e5] max-w-md w-full p-6 shadow-xl space-y-4"
+            wire:click.self="closeResolve"
+            class="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4"
         >
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 class="text-sm font-bold text-[#000000]">
-                    Penyelesaian Sengketa Aduan <span x-text="selectedComplaintTicket"></span>
-                </h3>
-                <button
-                    type="button"
-                    @click="resolveModalOpen = false"
-                    class="text-gray-400 hover:text-black font-bold text-sm"
-                >
-                    &times;
-                </button>
-            </div>
-
-            <form :action="'/superadmin/pengaduan/' + selectedComplaintId + '/resolve'" method="POST" class="space-y-4">
-                @csrf
-                <div>
-                    <label class="block text-xs font-bold text-black mb-1">
-                        Keputusan Sengketa (Status Klaim)
-                    </label>
-                    <select
-                        name="keputusan"
-                        class="w-full bg-[#ffffff] text-xs text-black border border-gray-300 rounded-[4px] p-2 focus:border-black focus:outline-hidden"
-                    >
-                        <option value="Selesai & Kasus Ditutup">Selesai & Kasus Ditutup</option>
-                        <option value="Denda Keterlambatan Diberlakukan">Denda Keterlambatan Diberlakukan</option>
-                        <option value="Klaim Penggantian Disetujui">Klaim Penggantian Disetujui</option>
-                        <option value="Mediasi Damai Disepakati">Mediasi Damai Disepakati</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-black mb-1">
-                        Justifikasi & Catatan Resolusi Tertulis (SRS UC-25) <span class="text-red-500">*</span>
-                    </label>
-                    <textarea
-                        name="justifikasi"
-                        rows="3"
-                        required
-                        placeholder="Tuliskan ringkasan mediasi dan alasan keputusan yang dicatat ke audit log..."
-                        class="w-full bg-[#ffffff] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
-                    ></textarea>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+            <div class="bg-[#ffffff] rounded-[4px] border border-[#e5e5e5] max-w-md w-full p-6 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h3 class="text-sm font-bold text-[#000000]">
+                        Penyelesaian Sengketa Aduan {{ $selectedComplaintTicket }}
+                    </h3>
                     <button
                         type="button"
-                        @click="resolveModalOpen = false"
-                        class="px-4 py-2 bg-[#d9d9d9] text-[#000000] rounded-[4px] text-xs font-semibold hover:bg-gray-300 transition"
+                        wire:click="closeResolve"
+                        class="text-gray-400 hover:text-black font-bold text-sm"
                     >
-                        Batal
-                    </button>
-                    <button
-                        type="submit"
-                        class="px-4 py-2 bg-[#000000] text-[#ffffff] rounded-[4px] text-xs font-semibold hover:bg-neutral-800 transition"
-                    >
-                        Simpan & Selesaikan
+                        &times;
                     </button>
                 </div>
-            </form>
+
+                <form wire:submit="resolveComplaint" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-black mb-1">
+                            Keputusan Sengketa (Status Klaim)
+                        </label>
+                        <select
+                            wire:model="keputusan"
+                            class="w-full bg-[#ffffff] text-xs text-black border border-gray-300 rounded-[4px] p-2 focus:border-black focus:outline-hidden"
+                        >
+                            <option value="Selesai & Kasus Ditutup">Selesai & Kasus Ditutup</option>
+                            <option value="Denda Keterlambatan Diberlakukan">Denda Keterlambatan Diberlakukan</option>
+                            <option value="Klaim Penggantian Disetujui">Klaim Penggantian Disetujui</option>
+                            <option value="Mediasi Damai Disepakati">Mediasi Damai Disepakati</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-black mb-1">
+                            Justifikasi & Catatan Resolusi Tertulis (SRS UC-25) <span class="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            wire:model="justifikasi"
+                            rows="3"
+                            required
+                            placeholder="Tuliskan ringkasan mediasi dan alasan keputusan yang dicatat ke audit log..."
+                            class="w-full bg-[#ffffff] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
+                        ></textarea>
+                        @error('justifikasi')
+                            <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                        <button
+                            type="button"
+                            wire:click="closeResolve"
+                            class="px-4 py-2 bg-[#d9d9d9] text-[#000000] rounded-[4px] text-xs font-semibold hover:bg-gray-300 transition"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-[#000000] text-[#ffffff] rounded-[4px] text-xs font-semibold hover:bg-neutral-800 transition"
+                        >
+                            Simpan & Selesaikan
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
+    @endif
 </div>
-@endsection

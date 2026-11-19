@@ -39,6 +39,7 @@ class ProductCatalogController extends Controller
 
         // Query produk lintas tenant
         $query = Produk::with(['tenant', 'galeri', 'kategori'])
+            ->whereHas('tenant', fn ($tenant) => $tenant->where('mode_libur', false))
             ->withMin('durasi as lowest_duration_price', 'harga')
             ->withAvg('reviews as avg_rating', 'rating_nilai')
             ->withCount(['reviews', 'pemesanans']);

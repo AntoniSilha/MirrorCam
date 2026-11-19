@@ -4,6 +4,9 @@ use App\Http\Controllers\MidtransCallbackController;
 use App\Http\Controllers\SuperAdmin\DashboardController;
 use App\Http\Controllers\SuperAdmin\KomisiPlatformController;
 use App\Http\Controllers\SuperAdmin\TenantManagementController;
+use App\Livewire\SuperAdmin\Dashboard as SuperAdminDashboard;
+use App\Livewire\SuperAdmin\KomisiPlatform as SuperAdminKomisiPlatform;
+use App\Livewire\SuperAdmin\TenantManagement as SuperAdminTenantManagement;
 use App\Models\User;
 use App\Modules\Authentication\Controllers\GoogleRegistrationController;
 use App\Modules\TenantManagement\Controllers\MitraRegisterController;
@@ -85,19 +88,19 @@ Route::middleware(['auth', 'role.superadmin'])->prefix('superadmin')->name('supe
     Route::redirect('/', '/superadmin/dashboard');
 
     // Halaman 1: Ringkasan & Dashboard + Pusat Aduan
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', SuperAdminDashboard::class)->name('dashboard');
     Route::post('/pengaduan/{id}/resolve', [DashboardController::class, 'resolveComplaint'])->name('pengaduan.resolve');
 
     // Halaman 2: Manajemen Tenant Mitra
     Route::get('/tenant/export', [TenantManagementController::class, 'export'])->name('tenant.export');
-    Route::get('/tenant', [TenantManagementController::class, 'index'])->name('tenant.index');
+    Route::get('/tenant', SuperAdminTenantManagement::class)->name('tenant.index');
     Route::post('/tenant', [TenantManagementController::class, 'store'])->name('tenant.store');
     Route::post('/tenant/{id}/approve', [TenantManagementController::class, 'approve'])->name('tenant.approve');
     Route::post('/tenant/{id}/suspend', [TenantManagementController::class, 'suspend'])->name('tenant.suspend');
 
     // Halaman 3: Rekapitulasi Komisi Platform
     Route::get('/komisi/export', [KomisiPlatformController::class, 'export'])->name('komisi.export');
-    Route::get('/komisi', [KomisiPlatformController::class, 'index'])->name('komisi.index');
+    Route::get('/komisi', SuperAdminKomisiPlatform::class)->name('komisi.index');
     Route::post('/komisi/{id}/verify', [KomisiPlatformController::class, 'verify'])->name('komisi.verify');
 });
 

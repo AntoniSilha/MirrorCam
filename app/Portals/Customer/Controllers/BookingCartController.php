@@ -4,6 +4,7 @@ namespace App\Portals\Customer\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Produk;
+use App\Models\Tenant;
 use App\Models\VerifikasiKtp;
 use App\Services\PaymentOrderService;
 use Illuminate\Http\Request;
@@ -37,6 +38,12 @@ class BookingCartController extends Controller
         ]);
 
         $produk = Produk::with(['tenant', 'galeri', 'durasi'])->findOrFail($validated['id_produk']);
+
+        if ($produk->tenant?->mode_libur) {
+            return back()->withErrors([
+                'id_produk' => 'Toko '.$produk->tenant->nama_toko.' sedang libur dan belum menerima pesanan baru.',
+            ])->withInput();
+        }
 
         $durasi = $produk->durasi->firstWhere('durasi', $validated['durasi_kode']);
 
@@ -116,6 +123,17 @@ class BookingCartController extends Controller
         if ($cartItems->isEmpty()) {
             return redirect()->route('keranjang.index')
                 ->withErrors(['cart' => 'Keranjang sewa masih kosong.']);
+        }
+
+        $closedTenants = Tenant::query()
+            ->whereIn('id_tenant', $cartItems->pluck('id_tenant')->filter()->all())
+            ->where('mode_libur', true)
+            ->pluck('nama_toko');
+
+        if ($closedTenants->isNotEmpty()) {
+            return redirect()->route('keranjang.index')->withErrors([
+                'cart' => 'Toko berikut sedang libur sehingga pesanan tidak dapat diproses: '.$closedTenants->implode(', ').'.',
+            ]);
         }
 
         $user = Auth::user();

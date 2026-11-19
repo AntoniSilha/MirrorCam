@@ -8,6 +8,12 @@
 
         @include('customer.tenant.components.tenant-profile', ['tenant' => $tenant])
 
+        @if ($tenant->mode_libur)
+            <div class="mb-5 rounded-[4px] border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+                Toko ini sedang libur sementara dan belum menerima pesanan baru. Silakan kembali lagi nanti.
+            </div>
+        @endif
+
         @include('customer.tenant.components.filter-bar', [
             'tenant' => $tenant,
             'kategoriTabs' => $kategoriTabs,

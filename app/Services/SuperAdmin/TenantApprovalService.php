@@ -23,7 +23,8 @@ class TenantApprovalService
         $totalToko = Tenant::count();
 
         $antreanVerifikasi = Tenant::where(function (Builder $q) {
-            $q->where('status_mitra', 'like', '%verifikasi%')
+            $q->where('status_mitra', 'noverified')
+                ->orWhere('status_mitra', 'like', '%verifikasi%')
                 ->orWhere('status_mitra', 'like', '%validasi%')
                 ->orWhere('status_mitra', 'like', '%pending%')
                 ->orWhere('status_mitra', 'Menunggu Verifikasi');
@@ -45,7 +46,7 @@ class TenantApprovalService
     /**
      * Retrieve paginated tenants with filtering and tab counts
      */
-    public function getTenants(array $filters = [], int $perPage = 10): array
+    public function getTenants(array $filters = [], int $perPage = 10, int $page = 1): array
     {
         $activeTab = strtolower($filters['tab'] ?? 'all');
         $search = trim($filters['search'] ?? '');
@@ -127,7 +128,7 @@ class TenantApprovalService
             $query->where('alamat_toko', 'like', "%{$city}%");
         }
 
-        $tenants = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $tenants = $query->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', max(1, $page));
 
         return [
             'tenants' => $tenants,

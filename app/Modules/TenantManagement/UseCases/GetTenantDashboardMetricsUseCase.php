@@ -100,14 +100,14 @@ class GetTenantDashboardMetricsUseCase
             $availableStock = max(0, (int) $product->total_stock_unit - (int) $rentedByProduct->get($product->id_produk, 0));
 
             return [
-            'id' => $product->id_produk,
-            'nama' => $product->nama_produk,
-            'foto' => $product->primary_image,
-            'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
-            'harga' => (float) ($product->harga_mulai ?? 0),
-            'stok' => $availableStock,
-            'status' => $availableStock > 0 ? 'Tersedia' : 'Stok Habis',
-        ];
+                'id' => $product->id_produk,
+                'nama' => $product->nama_produk,
+                'foto' => $product->primary_image,
+                'kategori' => $categories->get($product->id_kategori) ?? 'Umum',
+                'harga' => (float) ($product->harga_mulai ?? 0),
+                'stok' => $availableStock,
+                'status' => $availableStock > 0 ? 'Tersedia' : 'Stok Habis',
+            ];
         })->values();
 
         $bookingRows = $bookings->map(fn (DetailPemesananTenant $booking) => [
@@ -265,6 +265,7 @@ class GetTenantDashboardMetricsUseCase
                 'status' => 'Belum Terdaftar',
                 'logo' => null,
                 'inisial' => $this->initials($name),
+                'mode_libur' => false,
             ],
             'stats' => [
                 'total_produk' => 0,
@@ -312,6 +313,7 @@ class GetTenantDashboardMetricsUseCase
             'status' => $tenant->status_mitra === 'verified' ? 'Terverifikasi' : 'Belum Terverifikasi',
             'logo' => $tenant->url_logo,
             'inisial' => $this->initials($name),
+            'mode_libur' => (bool) $tenant->mode_libur,
         ];
     }
 

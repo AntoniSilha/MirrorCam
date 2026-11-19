@@ -36,6 +36,7 @@ class SearchCatalogUseCase
 
         if (Schema::hasTable('produks')) {
             $query = Product::with(['tenant', 'category', 'gallery'])
+                ->whereHas('tenant', fn ($tenant) => $tenant->where('mode_libur', false))
                 ->withAvg('reviews as avg_rating', 'rating_nilai')
                 ->withCount(['reviews', 'pemesanans']);
 

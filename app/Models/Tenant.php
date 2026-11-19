@@ -16,6 +16,13 @@ class Tenant extends Model
 
     protected $guarded = ['id_tenant'];
 
+    protected function casts(): array
+    {
+        return [
+            'mode_libur' => 'boolean',
+        ];
+    }
+
     /**
      * Relationship: Products owned by this tenant
      */

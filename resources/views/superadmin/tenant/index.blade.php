@@ -1,9 +1,4 @@
-@extends('superadmin.layouts.app')
-
-@section('title', 'Manajemen Tenant Mitra — SuperAdmin MirrorCam')
-
-@section('content')
-<div class="space-y-10 sm:space-y-12" x-data="{ createModalOpen: false, suspendModalOpen: false, suspendTenantId: null, suspendTenantName: '' }">
+<div class="space-y-10 sm:space-y-12">
     <!-- 1. Header Halaman & Aksi Atas -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -28,7 +23,7 @@
 
             <button
                 type="button"
-                @click="createModalOpen = true"
+                wire:click="openCreate"
                 class="inline-flex items-center gap-1.5 bg-[#000000] text-[#ffffff] hover:bg-neutral-800 px-4 py-2.5 rounded-[4px] text-xs font-semibold shadow-xs transition cursor-pointer"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,43 +60,42 @@
     <div class="bg-[#ffffff] border border-[#e5e5e5] rounded-[4px] p-5 shadow-xs space-y-4">
         <!-- Status Tabs Baris Atas -->
         <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <a
-                href="{{ route('superadmin.tenant.index', array_merge(request()->except('tab', 'page'), ['tab' => 'all'])) }}"
+            <button
+                type="button"
+                wire:click="setTab('all')"
                 class="px-4 py-2 text-xs font-semibold rounded-[4px] whitespace-nowrap transition {{ $activeTab === 'all' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'bg-[#f9f9f9] text-gray-700 hover:text-black border border-gray-200' }}"
             >
                 Semua Tenant ({{ $counts['all'] }})
-            </a>
-            <a
-                href="{{ route('superadmin.tenant.index', array_merge(request()->except('tab', 'page'), ['tab' => 'menunggu_validasi'])) }}"
+            </button>
+            <button
+                type="button"
+                wire:click="setTab('menunggu_validasi')"
                 class="px-4 py-2 text-xs font-semibold rounded-[4px] whitespace-nowrap transition {{ $activeTab === 'menunggu_validasi' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'bg-[#f9f9f9] text-gray-700 hover:text-black border border-gray-200' }}"
             >
                 Menunggu Validasi ({{ $counts['menunggu'] }})
-            </a>
-            <a
-                href="{{ route('superadmin.tenant.index', array_merge(request()->except('tab', 'page'), ['tab' => 'mitra_aktif'])) }}"
+            </button>
+            <button
+                type="button"
+                wire:click="setTab('mitra_aktif')"
                 class="px-4 py-2 text-xs font-semibold rounded-[4px] whitespace-nowrap transition {{ $activeTab === 'mitra_aktif' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'bg-[#f9f9f9] text-gray-700 hover:text-black border border-gray-200' }}"
             >
                 Mitra Aktif ({{ $counts['aktif'] }})
-            </a>
-            <a
-                href="{{ route('superadmin.tenant.index', array_merge(request()->except('tab', 'page'), ['tab' => 'ditangguhkan'])) }}"
+            </button>
+            <button
+                type="button"
+                wire:click="setTab('ditangguhkan')"
                 class="px-4 py-2 text-xs font-semibold rounded-[4px] whitespace-nowrap transition {{ $activeTab === 'ditangguhkan' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'bg-[#f9f9f9] text-gray-700 hover:text-black border border-gray-200' }}"
             >
                 Ditangguhkan / Suspend ({{ $counts['suspend'] }})
-            </a>
+            </button>
         </div>
 
         <!-- Form Pencarian & Dropdown Kota -->
-        <form method="GET" action="{{ route('superadmin.tenant.index') }}" class="flex flex-col sm:flex-row items-center gap-3">
-            @if ($activeTab !== 'all')
-                <input type="hidden" name="tab" value="{{ $activeTab }}">
-            @endif
-
+        <div class="flex flex-col sm:flex-row items-center gap-3">
             <div class="relative flex-1 w-full">
                 <input
                     type="text"
-                    name="search"
-                    value="{{ $search }}"
+                    wire:model.live.debounce.300ms="search"
                     placeholder="Cari nama toko, PIC, ID Tenant (#TNT-...), kota, atau NIK..."
                     class="w-full bg-[#f9f9f9] text-xs text-black placeholder-gray-400 pl-9 pr-4 py-2.5 border border-gray-300 rounded-[4px] focus:outline-hidden focus:border-black transition"
                 >
@@ -114,19 +108,16 @@
 
             <div class="w-full sm:w-60">
                 <select
-                    name="city"
-                    onchange="this.form.submit()"
+                    wire:model.live="city"
                     class="w-full bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] py-2.5 px-3 focus:outline-hidden focus:border-black transition cursor-pointer"
                 >
                     <option value="">Kota: Semua Wilayah</option>
                     @foreach ($cities as $c)
-                        <option value="{{ $c }}" {{ strtolower($selectedCity) === strtolower($c) ? 'selected' : '' }}>
-                            Kota: {{ $c }}
-                        </option>
+                        <option value="{{ $c }}">Kota: {{ $c }}</option>
                     @endforeach
                 </select>
             </div>
-        </form>
+        </div>
     </div>
 
     <!-- 4. Tabel Mitra Tenant -->
@@ -229,24 +220,22 @@
                             <td class="py-4 px-4 align-top text-center">
                                 <div class="inline-flex items-center gap-2">
                                     <!-- Tombol Setujui / Aktifkan -->
-                                    <form action="{{ route('superadmin.tenant.approve', $tenant->id_tenant) }}" method="POST" class="inline">
-                                        @csrf
-                                        <button
-                                            type="submit"
-                                            class="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-700 hover:text-black hover:bg-gray-100 transition shadow-2xs {{ $isAktif ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer' }}"
-                                            title="Setujui / Aktifkan Mitra"
-                                            {{ $isAktif ? 'disabled' : '' }}
-                                        >
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                                            </svg>
-                                        </button>
-                                    </form>
+                                    <button
+                                        type="button"
+                                        wire:click="approve({{ $tenant->id_tenant }})"
+                                        class="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-700 hover:text-black hover:bg-gray-100 transition shadow-2xs {{ $isAktif ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer' }}"
+                                        title="Setujui / Aktifkan Mitra"
+                                        {{ $isAktif ? 'disabled' : '' }}
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </button>
 
                                     <!-- Tombol Tangguhkan / Suspend -->
                                     <button
                                         type="button"
-                                        @click="suspendModalOpen = true; suspendTenantId = {{ $tenant->id_tenant }}; suspendTenantName = '{{ $tenant->nama_toko }}'"
+                                        wire:click="openSuspend({{ $tenant->id_tenant }}, '{{ $tenant->nama_toko }}')"
                                         class="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-700 hover:text-red-600 hover:bg-red-50 transition shadow-2xs cursor-pointer"
                                         title="Tangguhkan / Suspend Mitra"
                                     >
@@ -280,37 +269,33 @@
                 Menampilkan {{ $tenants->firstItem() ?? 0 }}-{{ $tenants->lastItem() ?? 0 }} dari {{ $tenants->total() }} tenant mitra terdaftar
             </span>
             <div>
-                {{ $tenants->appends(request()->query())->links('pagination::simple-tailwind') }}
+                {{ $tenants->links('pagination::simple-tailwind') }}
             </div>
         </div>
     </div>
 
     <!-- Modal Form Tambah Mitra Manual (SRS UC-23 / FR-ADM-01) -->
-    <div
-        x-show="createModalOpen"
-        x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4"
-    >
+    @if ($createModalOpen)
         <div
-            @click.away="createModalOpen = false"
-            class="bg-[#ffffff] rounded-[4px] border border-[#e5e5e5] max-w-xl w-full p-6 sm:p-7 shadow-xl space-y-5"
+            wire:click.self="closeCreate"
+            class="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4"
         >
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 class="text-sm sm:text-base font-bold text-[#000000]">
-                    + Tambah Mitra Tenant Manual (Onboarding Platform)
-                </h3>
-                <button
-                    type="button"
-                    @click="createModalOpen = false"
-                    class="text-gray-400 hover:text-black font-bold text-lg cursor-pointer"
-                >
-                    &times;
-                </button>
-            </div>
+            <div class="bg-[#ffffff] rounded-[4px] border border-[#e5e5e5] max-w-xl w-full p-6 sm:p-7 shadow-xl space-y-5">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h3 class="text-sm sm:text-base font-bold text-[#000000]">
+                        + Tambah Mitra Tenant Manual (Onboarding Platform)
+                    </h3>
+                    <button
+                        type="button"
+                        wire:click="closeCreate"
+                        class="text-gray-400 hover:text-black font-bold text-lg cursor-pointer"
+                    >
+                        &times;
+                    </button>
+                </div>
 
-            <form action="{{ route('superadmin.tenant.store') }}" method="POST" class="space-y-4">
-                @csrf
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <form wire:submit="createTenant" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-black mb-1">
                             Nama Toko / Rental <span class="text-red-500">*</span>
@@ -318,6 +303,7 @@
                         <input
                             type="text"
                             name="nama_toko"
+                            wire:model="nama_toko"
                             required
                             placeholder="Contoh: Jakarta Cine Gear"
                             class="w-full bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
@@ -331,6 +317,7 @@
                         <input
                             type="text"
                             name="nama_penanggungjawab"
+                            wire:model="nama_penanggungjawab"
                             required
                             placeholder="Contoh: Budi Santoso"
                             class="w-full bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
@@ -344,6 +331,7 @@
                         <input
                             type="text"
                             name="whatsapp_resmi"
+                            wire:model="whatsapp_resmi"
                             required
                             placeholder="Contoh: 08112093812"
                             class="w-full bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
@@ -357,6 +345,7 @@
                         <input
                             type="email"
                             name="email_resmi"
+                            wire:model="email_resmi"
                             required
                             placeholder="Contoh: budi@cinegear.id"
                             class="w-full bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
@@ -370,6 +359,7 @@
                         <input
                             type="text"
                             name="kota"
+                            wire:model="kota"
                             required
                             placeholder="Contoh: Jakarta Selatan"
                             class="w-full bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
@@ -382,10 +372,11 @@
                         </label>
                         <select
                             name="status_mitra"
+                            wire:model="status_mitra"
                             class="w-full bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2.5 focus:border-black focus:outline-hidden"
                         >
-                            <option value="aktif">Aktif Langsung</option>
-                            <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
+                            <option value="verified">Aktif Langsung</option>
+                            <option value="noverified">Menunggu Verifikasi</option>
                         </select>
                     </div>
                 </div>
@@ -396,6 +387,7 @@
                     </label>
                     <textarea
                         name="alamat_toko"
+                            wire:model="alamat_toko"
                         rows="2"
                         required
                         placeholder="Contoh: Jl. Senopati No. 12, Kebayoran Baru"
@@ -412,18 +404,21 @@
                         <input
                             type="text"
                             name="nama_bank"
+                            wire:model="nama_bank"
                             placeholder="Bank (BCA/Mandiri)"
                             class="bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2 focus:border-black focus:outline-hidden"
                         >
                         <input
                             type="text"
                             name="nomor_rekening"
+                            wire:model="nomor_rekening"
                             placeholder="Nomor Rekening"
                             class="bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2 focus:border-black focus:outline-hidden"
                         >
                         <input
                             type="text"
                             name="nama_pemilik_rekening"
+                            wire:model="nama_pemilik_rekening"
                             placeholder="Nama Pemilik"
                             class="bg-[#f9f9f9] text-xs text-black border border-gray-300 rounded-[4px] p-2 focus:border-black focus:outline-hidden"
                         >
@@ -433,7 +428,7 @@
                 <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
                     <button
                         type="button"
-                        @click="createModalOpen = false"
+                        wire:click="closeCreate"
                         class="px-4 py-2 bg-[#d9d9d9] text-[#000000] rounded-[4px] text-xs font-semibold hover:bg-gray-300 transition"
                     >
                         Batal
@@ -445,71 +440,68 @@
                         Simpan & Aktifkan Mitra
                     </button>
                 </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
+    @endif
 
     <!-- Modal Konfirmasi Penangguhan (Suspend) -->
-    <div
-        x-show="suspendModalOpen"
-        x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4"
-    >
+    @if ($suspendModalOpen)
         <div
-            @click.away="suspendModalOpen = false"
-            class="bg-[#ffffff] rounded-[4px] border border-[#e5e5e5] max-w-md w-full p-6 shadow-xl space-y-4"
+            wire:click.self="closeSuspend"
+            class="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4"
         >
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 class="text-sm font-bold text-red-600 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                    <span>Konfirmasi Penangguhan Mitra</span>
-                </h3>
-                <button
-                    type="button"
-                    @click="suspendModalOpen = false"
-                    class="text-gray-400 hover:text-black font-bold text-sm"
-                >
-                    &times;
-                </button>
-            </div>
-
-            <p class="text-xs text-gray-600 leading-relaxed">
-                Apakah Anda yakin ingin menangguhkan tenant <span class="font-bold text-black" x-text="suspendTenantName"></span>? Tenant yang ditangguhkan tidak akan dapat menerima pesanan baru.
-            </p>
-
-            <form :action="'/superadmin/tenant/' + suspendTenantId + '/suspend'" method="POST" class="space-y-3">
-                @csrf
-                <div>
-                    <label class="block text-xs font-bold text-black mb-1">
-                        Alasan Penangguhan (Catatan Audit)
-                    </label>
-                    <textarea
-                        name="alasan"
-                        rows="2"
-                        placeholder="Contoh: Sengketa aduan berulang atau keterlambatan settlement..."
-                        class="w-full bg-[#ffffff] text-xs text-black border border-gray-300 rounded-[4px] p-2 focus:border-black focus:outline-hidden"
-                    ></textarea>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+            <div class="bg-[#ffffff] rounded-[4px] border border-[#e5e5e5] max-w-md w-full p-6 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h3 class="text-sm font-bold text-red-600 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <span>Konfirmasi Penangguhan Mitra</span>
+                    </h3>
                     <button
                         type="button"
-                        @click="suspendModalOpen = false"
-                        class="px-4 py-2 bg-[#d9d9d9] text-[#000000] rounded-[4px] text-xs font-semibold hover:bg-gray-300 transition"
+                        wire:click="closeSuspend"
+                        class="text-gray-400 hover:text-black font-bold text-sm"
                     >
-                        Batal
-                    </button>
-                    <button
-                        type="submit"
-                        class="px-4 py-2 bg-[#ba1a1a] text-[#ffffff] rounded-[4px] text-xs font-semibold hover:bg-red-800 transition"
-                    >
-                        Tangguhkan Mitra
+                        &times;
                     </button>
                 </div>
-            </form>
+
+                <p class="text-xs text-gray-600 leading-relaxed">
+                    Apakah Anda yakin ingin menangguhkan tenant <span class="font-bold text-black">{{ $suspendTenantName }}</span>? Tenant yang ditangguhkan tidak akan dapat menerima pesanan baru.
+                </p>
+
+                <form wire:submit="suspend" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-black mb-1">
+                            Alasan Penangguhan (Catatan Audit)
+                        </label>
+                        <textarea
+                            wire:model="suspendReason"
+                            rows="2"
+                            placeholder="Contoh: Sengketa aduan berulang atau keterlambatan settlement..."
+                            class="w-full bg-[#ffffff] text-xs text-black border border-gray-300 rounded-[4px] p-2 focus:border-black focus:outline-hidden"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                        <button
+                            type="button"
+                            wire:click="closeSuspend"
+                            class="px-4 py-2 bg-[#d9d9d9] text-[#000000] rounded-[4px] text-xs font-semibold hover:bg-gray-300 transition"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-[#ba1a1a] text-[#ffffff] rounded-[4px] text-xs font-semibold hover:bg-red-800 transition"
+                        >
+                            Tangguhkan Mitra
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
+    @endif
 </div>
-@endsection

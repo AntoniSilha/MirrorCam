@@ -1,5 +1,7 @@
 <?php
 
+use App\Livewire\SuperAdmin\Dashboard;
+use App\Livewire\SuperAdmin\TenantManagement;
 use App\Models\AccountGoogle;
 use App\Models\AuditLog;
 use App\Models\DetailOperasionalTenant;
@@ -13,6 +15,7 @@ use App\Models\User;
 use App\Models\VerifikasiKtp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -355,4 +358,66 @@ test('superadmin can export commission report to csv', function () {
     $response->assertOk();
     $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
     expect($response->getContent())->toContain('ID Transaksi Komisi,Tanggal & Waktu,Nama Tenant');
+});
+
+test('superadmin can approve a tenant from the livewire tenant table', function () {
+    $superadmin = helperCreateSuperAdminUser('superadmin');
+    $tenant = helperCreateDummyTenant('Livewire Camera House', 'noverified');
+
+    Livewire::actingAs($superadmin)
+        ->test(TenantManagement::class)
+        ->call('approve', $tenant->id_tenant)
+        ->assertHasNoErrors();
+
+    expect($tenant->fresh()->status_mitra)->toBe('verified');
+});
+
+test('superadmin can resolve a complaint from the livewire dashboard modal', function () {
+    $superadmin = helperCreateSuperAdminUser('superadmin');
+    $customer = helperCreateSuperAdminUser('user');
+    $tenant = helperCreateDummyTenant('Livewire Cinema Lab');
+    $booking = helperCreateDummyBooking($customer, $tenant, 1500000, 'Sedang Disewa');
+
+    $complaint = PengaduanPelanggan::create([
+        'nomor_tiket' => 'TKT-LIVEWIRE-001',
+        'id_akun' => $customer->id_akun,
+        'id_tenant' => $tenant->id_tenant,
+        'id_pemesanan' => $booking->id_pemesanan,
+        'kategori_pelanggaran' => 'Alat Rusak / Cacat',
+        'kronologi_kejadian' => 'Unit kamera tidak menyala saat diterima.',
+        'status_kasus' => 'aktif',
+    ]);
+
+    Livewire::actingAs($superadmin)
+        ->test(Dashboard::class)
+        ->call('openResolve', $complaint->id_pengaduan, $complaint->nomor_tiket)
+        ->set('justifikasi', 'Mitra mengganti unit baru dan penyewa menyetujui mediasi.')
+        ->set('keputusan', 'Klaim Penggantian Disetujui')
+        ->call('resolveComplaint')
+        ->assertHasNoErrors();
+
+    expect($complaint->fresh()->status_kasus)->toBe('Selesai');
+});
+
+test('superadmin can verify commission settlement from the livewire commission modal', function () {
+    $superadmin = helperCreateSuperAdminUser('superadmin');
+    $customer = helperCreateSuperAdminUser('user');
+    $tenant = helperCreateDummyTenant('Livewire Bali Camera');
+    $booking = helperCreateDummyBooking($customer, $tenant, 3000000, 'Selesai');
+
+    $komisi = KomisiPlatform::create([
+        'id_pemesanan' => $booking->id_pemesanan,
+        'kode_komisi' => 'KM-LIVEWIRE-01',
+        'total_komisi' => 300000,
+        'status_komisi' => 'Menunggu',
+    ]);
+
+    Livewire::actingAs($superadmin)
+        ->test(App\Livewire\SuperAdmin\KomisiPlatform::class)
+        ->call('openVerify', $komisi->id_komisi)
+        ->set('catatan', 'Settlement 90% sudah ditransfer ke rekening tenant.')
+        ->call('verify')
+        ->assertHasNoErrors();
+
+    expect($komisi->fresh()->status_komisi)->toBe('Selesai');
 });

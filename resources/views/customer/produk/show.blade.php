@@ -238,6 +238,12 @@
                 @enderror
             </div>
 
+            @if ($tenant?->mode_libur)
+                <div class="mt-5 rounded-[4px] border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+                    {{ $tenant->nama_toko }} sedang libur sementara. Booking baru belum dapat diproses.
+                </div>
+            @endif
+
             <!-- Tombol Booking Sekarang -->
             <form method="POST" action="{{ route('keranjang.add') }}" class="mt-7">
                 @csrf
@@ -247,8 +253,8 @@
                 <input type="hidden" name="durasi_label" :value="durasiLabel">
 
                 <button type="submit"
-                        :disabled="! selectedDuration"
-                        :class="! selectedDuration
+                        :disabled="! selectedDuration || {{ $tenant?->mode_libur ? 'true' : 'false' }}"
+                        :class="! selectedDuration || {{ $tenant?->mode_libur ? 'true' : 'false' }}
                             ? 'bg-black/30 cursor-not-allowed'
                             : 'bg-[#000000] hover:bg-black/85 cursor-pointer'"
                         class="w-full py-4 px-6 rounded-[4px] text-[#ffffff] text-sm font-semibold inline-flex items-center justify-center gap-2.5 transition">
@@ -257,7 +263,7 @@
                         <path d="M3 6h18"/>
                         <path d="M16 10a4 4 0 0 1-8 0"/>
                     </svg>
-                    <span x-text="selectedDuration ? 'Booking Sekarang' : 'Durasi Tidak Tersedia'"></span>
+                    <span x-text="{{ $tenant?->mode_libur ? "'Toko Sedang Libur'" : "selectedDuration ? 'Booking Sekarang' : 'Durasi Tidak Tersedia'" }}"></span>
                 </button>
             </form>
         </div>

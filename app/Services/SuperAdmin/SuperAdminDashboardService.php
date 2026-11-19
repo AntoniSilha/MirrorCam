@@ -21,18 +21,18 @@ class SuperAdminDashboardService
         $startLastMonth = (clone $now)->subMonth()->startOfMonth();
         $endLastMonth = (clone $now)->subMonth()->endOfMonth();
 
-        // 1. Total Tenant Mitra (Status Aktif)
-        $totalTenant = Tenant::where(function ($q) {
-            $q->where('status_mitra', 'aktif')->orWhere('status_mitra', 'Aktif');
-        })->count();
+        // 1. Total Tenant Mitra (status aktif/terverifikasi pada skema enum saat ini)
+        $activeStatuses = ['verified', 'aktif', 'Aktif', 'official'];
 
-        $thisMonthTenant = Tenant::where(function ($q) {
-            $q->where('status_mitra', 'aktif')->orWhere('status_mitra', 'Aktif');
-        })->where('created_at', '>=', $startThisMonth)->count();
+        $totalTenant = Tenant::whereIn('status_mitra', $activeStatuses)->count();
 
-        $lastMonthTenant = Tenant::where(function ($q) {
-            $q->where('status_mitra', 'aktif')->orWhere('status_mitra', 'Aktif');
-        })->whereBetween('created_at', [$startLastMonth, $endLastMonth])->count();
+        $thisMonthTenant = Tenant::whereIn('status_mitra', $activeStatuses)
+            ->where('created_at', '>=', $startThisMonth)
+            ->count();
+
+        $lastMonthTenant = Tenant::whereIn('status_mitra', $activeStatuses)
+            ->whereBetween('created_at', [$startLastMonth, $endLastMonth])
+            ->count();
 
         $tenantGrowth = $this->calculatePercentageChange($thisMonthTenant, $lastMonthTenant);
 
@@ -88,15 +88,13 @@ class SuperAdminDashboardService
             $start = Carbon::create($year, $month, 1)->startOfMonth();
             $end = (clone $start)->endOfMonth();
 
-            $aktifCount = Tenant::where(function ($q) {
-                $q->where('status_mitra', 'aktif')->orWhere('status_mitra', 'Aktif');
-            })->where('created_at', '<=', $end)->count();
+            $aktifCount = Tenant::whereIn('status_mitra', ['verified', 'aktif', 'Aktif', 'official'])
+                ->where('created_at', '<=', $end)
+                ->count();
 
-            $validasiCount = Tenant::where(function ($q) {
-                $q->where('status_mitra', 'like', '%verifikasi%')
-                    ->orWhere('status_mitra', 'like', '%validasi%')
-                    ->orWhere('status_mitra', 'like', '%pending%');
-            })->whereBetween('created_at', [$start, $end])->count();
+            $validasiCount = Tenant::whereIn('status_mitra', ['noverified'])
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
 
             $months[] = [
                 'label' => $label,
@@ -167,7 +165,7 @@ class SuperAdminDashboardService
     /**
      * Get complaints directly connected to PengaduanPelanggan model with real-time relations
      */
-    public function getComplaints(array $filters = [], int $perPage = 5): array
+    public function getComplaints(array $filters = [], int $perPage = 5, int $page = 1): array
     {
         $statusTab = strtolower($filters['status'] ?? 'semua');
 
@@ -191,7 +189,7 @@ class SuperAdminDashboardService
             $baseQuery->whereRaw('LOWER(status_kasus) = ?', ['selesai']);
         }
 
-        $complaints = $baseQuery->orderBy('created_at', 'desc')->paginate($perPage);
+        $complaints = $baseQuery->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', max(1, $page));
 
         return [
             'complaints' => $complaints,
