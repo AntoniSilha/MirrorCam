@@ -175,7 +175,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
     <div class="flex min-h-screen min-w-0 flex-1 flex-col">
         @include('pages.mitra.partials.header')
 
-        <main class="w-full flex-1 px-5 py-6 md:px-8 md:py-7">
+        <main class="w-full flex-1 px-4 py-5 sm:px-5 sm:py-6 md:px-8 md:py-7">
             <div class="mx-auto w-full max-w-[1240px]">
                 @if (session()->has('status'))
                     <div class="mb-5 flex items-center justify-between rounded-lg border border-[#bbf7d0] bg-[#dcfce7] px-4 py-3 text-sm text-[#15803d] shadow-xs">

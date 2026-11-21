@@ -38,7 +38,7 @@ new #[Title('Data Pesanan - MirrorCam')] #[Layout('components.layouts.user-dashb
         return [
             'nama_lengkap_ktp' => $user->nama_lengkap_ktp ?: ($user->name ?? 'Nama Pengguna'),
             'role' => $user->role ?: 'User',
-            'avatar' => $user->avatar ?? null,
+            'avatar' => $user->avatar_url,
             'initials' => $user->initials,
         ];
     }

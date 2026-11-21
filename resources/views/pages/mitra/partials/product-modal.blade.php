@@ -1,7 +1,7 @@
     @if ($showProductModal)
-        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6" wire:click.self="closeProductModal">
-            <div class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-                <div class="flex items-start justify-between border-b border-neutral-200 px-6 py-4">
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-3 py-4 sm:px-4 sm:py-6" wire:click.self="closeProductModal">
+            <div class="flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+                <div class="flex items-start justify-between border-b border-neutral-200 px-4 py-4 sm:px-6">
                     <div>
                         <h3 class="text-base font-bold text-black">Tambah Produk Baru</h3>
                         <p class="mt-1 text-[11px] text-neutral-500">Lengkapi data inventaris gear yang akan disewakan.</p>
@@ -13,7 +13,7 @@
                     </button>
                 </div>
 
-                <form wire:submit="saveProduct" class="max-h-[calc(92vh-73px)] space-y-4 overflow-y-auto px-6 py-5">
+                <form wire:submit="saveProduct" class="max-h-[calc(94dvh-73px)] space-y-4 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
                     <div>
                         <label class="mb-1.5 block text-[11px] font-semibold text-neutral-700">Nama Produk</label>
                         <input type="text" wire:model="nama_produk" placeholder="Contoh: Sony FX3 Cinema Line" class="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-xs text-black outline-none transition focus:border-black focus:ring-1 focus:ring-black">

@@ -58,7 +58,7 @@ class PaymentController extends Controller
         $order = $this->refreshStatus($order);
 
         if (($order['status'] ?? null) === 'paid') {
-            session()->forget('mirrorcam_cart');
+            session()->forget(['mirrorcam_cart', 'mirrorcam_trx_code']);
 
             return response()->json([
                 'paid' => true,
@@ -92,7 +92,7 @@ class PaymentController extends Controller
                 ->with('error', 'Pembayaran belum diterima. Silakan selesaikan pembayaran QRIS.');
         }
 
-        session()->forget('mirrorcam_cart');
+        session()->forget(['mirrorcam_cart', 'mirrorcam_trx_code']);
 
         return view('customer.pembayaran.sukses', compact('order'));
     }

@@ -76,7 +76,12 @@ it('creates a pending QRIS payment order from checkout', function () {
         ->and($order['gross_amount'])->toBe(100000)
         ->and($order['tipe_bayar'])->toBe('dp_50')
         ->and($order['status'])->toBe('pending')
-        ->and(session('mirrorcam_cart'))->toHaveCount(1);
+        ->and(session('mirrorcam_cart'))->toBeNull()
+        ->and(session('mirrorcam_trx_code'))->toBeNull();
+
+    $this->get(route('keranjang.index'))
+        ->assertOk()
+        ->assertSee('Keranjang sewa kamu masih kosong');
 });
 
 it('shows the QRIS popup with the payment amount in demo mode', function () {
@@ -96,6 +101,28 @@ it('shows the QRIS popup with the payment amount in demo mode', function () {
         ->assertSee('Rp 200.000')
         ->assertSee('Mode demo')
         ->assertSee('Nominal otomatis terisi saat QRIS dipindai');
+});
+
+it('removes items from paid orders when visiting the cart', function () {
+    $user = paymentTestCreateUser();
+    $cart = paymentTestCart();
+
+    $this->actingAs($user)->withSession([
+        'mirrorcam_cart' => $cart,
+        'mirrorcam_trx_code' => 'MC-STUCK-0001',
+        'mirrorcam_payments' => [
+            'paid-token' => [
+                'token' => 'paid-token',
+                'status' => 'paid',
+                'items' => array_values($cart),
+            ],
+        ],
+    ])->get(route('keranjang.index'))
+        ->assertOk()
+        ->assertSee('Keranjang sewa kamu masih kosong');
+
+    expect(session('mirrorcam_cart'))->toBeNull()
+        ->and(session('mirrorcam_trx_code'))->toBeNull();
 });
 
 it('marks an order paid when the payment notification status is settled', function () {

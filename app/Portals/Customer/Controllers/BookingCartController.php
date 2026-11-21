@@ -78,10 +78,33 @@ class BookingCartController extends Controller
     public function cartIndex()
     {
         $cartItems = collect(session()->get('mirrorcam_cart', []));
+
+        $paidItemKeys = collect(session()->get('mirrorcam_payments', []))
+            ->filter(fn ($order) => is_array($order) && ($order['status'] ?? null) === 'paid')
+            ->flatMap(fn (array $order) => collect($order['items'] ?? [])->pluck('item_key'))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($paidItemKeys !== []) {
+            $cartItems = $cartItems->reject(
+                fn ($item, $key) => in_array($item['item_key'] ?? $key, $paidItemKeys, true)
+            );
+
+            if ($cartItems->isEmpty()) {
+                session()->forget(['mirrorcam_cart', 'mirrorcam_trx_code']);
+            } else {
+                session()->put('mirrorcam_cart', $cartItems->all());
+            }
+        }
+
         $groupedByTenant = $cartItems->groupBy('id_tenant');
 
-        $kodeTransaksiInduk = session()->get('mirrorcam_trx_code');
-        if (! $kodeTransaksiInduk) {
+        $kodeTransaksiInduk = $cartItems->isEmpty()
+            ? null
+            : session()->get('mirrorcam_trx_code');
+
+        if ($cartItems->isNotEmpty() && ! $kodeTransaksiInduk) {
             $kodeTransaksiInduk = 'MC-'.date('Ymd').'-'.rand(1000, 9999);
             session()->put('mirrorcam_trx_code', $kodeTransaksiInduk);
         }
@@ -105,7 +128,12 @@ class BookingCartController extends Controller
     {
         $cart = session()->get('mirrorcam_cart', []);
         unset($cart[$request->item_key]);
-        session()->put('mirrorcam_cart', $cart);
+
+        if (empty($cart)) {
+            session()->forget(['mirrorcam_cart', 'mirrorcam_trx_code']);
+        } else {
+            session()->put('mirrorcam_cart', $cart);
+        }
 
         return back()->with('success', 'Item dihapus dari keranjang.');
     }
@@ -178,6 +206,8 @@ class BookingCartController extends Controller
             $kycFilename,
             (int) $verification->id_ktp
         );
+
+        session()->forget(['mirrorcam_cart', 'mirrorcam_trx_code']);
 
         return redirect()
             ->route('pembayaran.show', ['token' => $order['token']])

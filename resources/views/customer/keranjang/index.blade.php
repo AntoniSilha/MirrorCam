@@ -27,9 +27,11 @@
         <h1 class="text-2xl sm:text-3xl font-bold text-[#000000] tracking-tight">
             Keranjang Sewa ({{ $groupedByTenant->count() }} Tenant)
         </h1>
-        <p class="text-xs sm:text-sm text-black/60 mt-1">
-            Kode Transaksi Induk: <strong class="text-[#000000]">{{ $kodeTransaksiInduk }}</strong>
-        </p>
+        @if($kodeTransaksiInduk)
+            <p class="text-xs sm:text-sm text-black/60 mt-1">
+                Kode Transaksi Induk: <strong class="text-[#000000]">{{ $kodeTransaksiInduk }}</strong>
+            </p>
+        @endif
     </div>
 
     @if($cartItems->isEmpty())

@@ -25,33 +25,33 @@
                         </div>
 
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[680px] text-left text-xs">
+                            <table class="w-full text-left text-xs sm:min-w-[680px]">
                                 <thead class="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-500">
                                     <tr>
-                                        <th class="px-6 py-3 font-semibold">Produk</th>
-                                        <th class="px-6 py-3 font-semibold">Kategori</th>
-                                        <th class="px-6 py-3 font-semibold">Harga Sewa</th>
-                                        <th class="px-6 py-3 font-semibold">Stok</th>
-                                        <th class="px-6 py-3 font-semibold">Status</th>
-                                        <th class="px-6 py-3 text-right font-semibold">Aksi</th>
+                                        <th class="px-4 py-3 font-semibold sm:px-6">Produk</th>
+                                        <th class="hidden px-6 py-3 font-semibold sm:table-cell">Kategori</th>
+                                        <th class="px-4 py-3 font-semibold sm:px-6">Harga Sewa</th>
+                                        <th class="hidden px-6 py-3 font-semibold sm:table-cell">Stok</th>
+                                        <th class="hidden px-6 py-3 font-semibold sm:table-cell">Status</th>
+                                        <th class="px-4 py-3 text-right font-semibold sm:px-6">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-neutral-100">
                                     @forelse ($dashboard['products'] as $product)
                                         <tr class="transition hover:bg-neutral-50">
-                                            <td class="px-6 py-4">
-                                                <div class="flex items-center gap-3">
+                                            <td class="px-4 py-4 sm:px-6">
+                                                <div class="flex min-w-0 items-center gap-3">
                                                     <img src="{{ $product['foto'] }}" alt="{{ $product['nama'] }}" loading="lazy" class="h-10 w-10 shrink-0 rounded-md border border-neutral-200 object-cover" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80';">
-                                                    <span class="font-semibold text-black">{{ $product['nama'] }}</span>
+                                                    <span class="line-clamp-2 font-semibold text-black">{{ $product['nama'] }}</span>
                                                 </div>
                                             </td>
-                                            <td class="px-6 py-4 text-neutral-500">{{ $product['kategori'] }}</td>
-                                            <td class="px-6 py-4 font-medium text-black">{{ $this->rupiah($product['harga']) }}</td>
-                                            <td class="px-6 py-4 text-neutral-500">{{ $product['stok'] }} unit</td>
-                                            <td class="px-6 py-4">
+                                            <td class="hidden px-6 py-4 text-neutral-500 sm:table-cell">{{ $product['kategori'] }}</td>
+                                            <td class="whitespace-nowrap px-4 py-4 font-medium text-black sm:px-6">{{ $this->rupiah($product['harga']) }}</td>
+                                            <td class="hidden px-6 py-4 text-neutral-500 sm:table-cell">{{ $product['stok'] }} unit</td>
+                                            <td class="hidden px-6 py-4 sm:table-cell">
                                                 <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold {{ $this->statusBadgeClasses($product['status']) }}">{{ $product['status'] }}</span>
                                             </td>
-                                            <td class="px-6 py-4 text-right">
+                                            <td class="px-4 py-4 text-right sm:px-6">
                                                 <button type="button" wire:click="editProduct({{ $product['id'] }})" class="rounded-md border border-neutral-300 px-3 py-1.5 text-[10px] font-semibold text-black hover:bg-neutral-100">Edit</button>
                                             </td>
                                         </tr>

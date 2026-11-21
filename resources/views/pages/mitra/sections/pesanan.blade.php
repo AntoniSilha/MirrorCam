@@ -16,28 +16,30 @@
                         </div>
 
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[860px] text-left text-xs">
+                            <table class="w-full text-left text-xs sm:min-w-[860px]">
                                 <thead class="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-500">
                                     <tr>
-                                        <th class="px-6 py-3 font-semibold">Kode</th>
-                                        <th class="px-6 py-3 font-semibold">Produk</th>
-                                        <th class="px-6 py-3 font-semibold">Penyewa</th>
-                                        <th class="px-6 py-3 font-semibold">Periode</th>
-                                        <th class="px-6 py-3 font-semibold">Status</th>
-                                        <th class="px-6 py-3 font-semibold">Total</th>
+                                        <th class="px-4 py-3 font-semibold sm:px-6">Kode</th>
+                                        <th class="px-4 py-3 font-semibold sm:px-6">Produk</th>
+                                        <th class="hidden px-6 py-3 font-semibold sm:table-cell">Penyewa</th>
+                                        <th class="hidden px-6 py-3 font-semibold sm:table-cell">Periode</th>
+                                        <th class="px-4 py-3 font-semibold sm:px-6">Status</th>
+                                        <th class="px-4 py-3 font-semibold sm:px-6">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-neutral-100">
                                     @forelse ($dashboard['bookings'] as $booking)
                                         <tr class="transition hover:bg-neutral-50">
-                                            <td class="px-6 py-4 font-semibold text-black">{{ $booking['kode'] }}</td>
-                                            <td class="px-6 py-4 text-neutral-600">{{ $booking['produk'] }}</td>
-                                            <td class="px-6 py-4 text-neutral-600">{{ $booking['penyewa'] }}</td>
-                                            <td class="px-6 py-4 text-neutral-500">{{ $booking['mulai'] }} - {{ $booking['selesai'] }}</td>
-                                            <td class="px-6 py-4">
+                                            <td class="whitespace-nowrap px-4 py-4 font-semibold text-black sm:px-6">{{ $booking['kode'] }}</td>
+                                            <td class="px-4 py-4 text-neutral-600 sm:px-6">
+                                                <span class="line-clamp-2">{{ $booking['produk'] }}</span>
+                                            </td>
+                                            <td class="hidden px-6 py-4 text-neutral-600 sm:table-cell">{{ $booking['penyewa'] }}</td>
+                                            <td class="hidden px-6 py-4 text-neutral-500 sm:table-cell">{{ $booking['mulai'] }} - {{ $booking['selesai'] }}</td>
+                                            <td class="px-4 py-4 sm:px-6">
                                                 <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold {{ $this->statusBadgeClasses($booking['status']) }}">{{ $booking['status'] }}</span>
                                             </td>
-                                            <td class="px-6 py-4 font-medium text-black">{{ $this->rupiah($booking['total']) }}</td>
+                                            <td class="whitespace-nowrap px-4 py-4 font-medium text-black sm:px-6">{{ $this->rupiah($booking['total']) }}</td>
                                         </tr>
                                     @empty
                                         <tr>

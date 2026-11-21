@@ -1,6 +1,6 @@
     @if ($showEditProductModal)
-        <div class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4 py-6" wire:click.self="$set('showEditProductModal', false)">
-            <form wire:submit="updateProduct" class="max-h-[90vh] w-full max-w-4xl space-y-4 overflow-y-auto rounded-xl bg-white p-5 shadow-xl sm:p-6">
+        <div class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-3 py-4 sm:px-4 sm:py-6" wire:click.self="$set('showEditProductModal', false)">
+            <form wire:submit="updateProduct" class="max-h-[94dvh] w-full max-w-4xl space-y-4 overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:p-6">
                 <div class="flex items-center justify-between">
                     <h3 class="text-base font-bold text-black">Edit Produk</h3>
                     <button type="button" wire:click="$set('showEditProductModal', false)" class="text-xl text-neutral-500">&times;</button>

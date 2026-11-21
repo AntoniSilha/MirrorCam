@@ -68,8 +68,8 @@
         <div class="bg-[#ffffff] border border-gray-200 rounded-[4px] p-2.5 flex items-center justify-between gap-2 shadow-xs">
             <div class="flex items-center gap-2.5 min-w-0">
                 <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border border-gray-300 shrink-0 flex items-center justify-center font-bold text-xs text-black">
-                    @if (auth()->check() && auth()->user()->avatar)
-                        <img src="{{ auth()->user()->avatar }}" alt="SuperAdmin" class="w-full h-full object-cover">
+                    @if (auth()->check() && auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="SuperAdmin" class="w-full h-full object-cover">
                     @else
                         <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="SuperAdmin" class="w-full h-full object-cover">
                     @endif

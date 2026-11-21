@@ -1,4 +1,4 @@
-    <aside class="fixed inset-y-0 left-0 z-50 flex h-screen w-[280px] shrink-0 transform flex-col justify-between border-r border-neutral-200 bg-white px-6 py-7 transition-transform duration-200 md:sticky md:top-0 md:z-30 md:translate-x-0 lg:w-[320px] lg:px-8 {{ $sidebarOpen ? 'translate-x-0' : '-translate-x-full' }}">
+    <aside class="fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] shrink-0 flex-col justify-between overflow-y-auto overscroll-contain border-r border-neutral-200 bg-white px-5 py-6 transition-transform duration-200 md:sticky md:top-0 md:z-30 md:w-[280px] md:translate-x-0 md:px-6 md:py-7 lg:w-[320px] lg:px-8 {{ $sidebarOpen ? 'translate-x-0' : '-translate-x-full' }}">
         <div>
             <div class="mb-10 flex items-center justify-between">
                 <button type="button" wire:click="showSection('ringkasan')" class="flex items-center gap-3 text-left">

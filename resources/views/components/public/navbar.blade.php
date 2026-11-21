@@ -61,8 +61,8 @@
                     <div class="flex items-center gap-2">
                         <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 px-2 py-1 rounded-[4px] hover:bg-[#f9f9f9] transition">
                             <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-200 border border-gray-300 shrink-0 flex items-center justify-center">
-                                @if (auth()->user()->avatar)
-                                    <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                                @if (auth()->user()->avatar_url)
+                                    <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
                                 @else
                                     <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
                                 @endif
@@ -111,6 +111,7 @@
         <div id="mobile-menu" class="hidden md:hidden border-t border-[#e5e5e5] py-3 space-y-2">
             <a href="{{ route('home') }}" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-3 py-2 text-sm font-medium {{ request()->routeIs('home') ? 'bg-black text-white' : 'text-gray-800 hover:bg-gray-50' }} rounded-[4px]">Beranda</a>
             <a href="{{ route('tenant.index') }}" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-3 py-2 text-sm font-medium {{ request()->routeIs('tenant.*') ? 'bg-black text-white' : 'text-gray-800 hover:bg-gray-50' }} rounded-[4px]">Tenant</a>
+            <a href="{{ route('katalog.index') }}" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-3 py-2 text-sm font-medium {{ request()->routeIs('katalog.*') ? 'bg-black text-white' : 'text-gray-800 hover:bg-gray-50' }} rounded-[4px]">Produk</a>
             <a href="{{ route('pengaduan.index') }}" onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="block px-3 py-2 text-sm font-medium {{ request()->routeIs('pengaduan.*') ? 'bg-black text-white' : 'text-gray-800 hover:bg-gray-50' }} rounded-[4px]">Pengaduan</a>
         </div>
     </div>

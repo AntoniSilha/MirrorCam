@@ -45,6 +45,7 @@ Route::get('/produk/{id}', [BookingCartController::class, 'showProduct'])->name(
 // Route Terproteksi Customer (Wajib Login)
 Route::middleware(['auth', 'role.user'])->group(function () {
     Route::livewire('/dashboard', 'pages::customer.dashboard')->name('dashboard');
+    Route::livewire('/profil', 'pages::customer.profile')->name('profile.edit');
     Route::resource('pengaduan', PengaduanPelangganController::class)->only(['index', 'create', 'store', 'show']);
 
     // Halaman Keranjang Sewa Multi-Tenant & Checkout

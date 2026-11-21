@@ -32,7 +32,7 @@ class UserProfileResource extends JsonResource
         }
 
         $email = is_object($user) && isset($user->email) ? (string) $user->email : '';
-        $avatar = is_object($user) && isset($user->avatar) ? (string) $user->avatar : null;
+        $avatar = $user instanceof User ? $user->avatar_url : (is_object($user) && isset($user->avatar) ? (string) $user->avatar : null);
         $googleId = is_object($user) && isset($user->google_id) ? (string) $user->google_id : null;
         $password = is_object($user) && isset($user->password) ? (string) $user->password : null;
 

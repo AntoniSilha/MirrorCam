@@ -34,11 +34,11 @@
     $gearImage = $order['gear_image'] ?? null;
 @endphp
 
-<div class="bg-white rounded-[8px] p-5 md:p-6 border border-neutral-200/90 shadow-2xs mb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:border-neutral-300 transition duration-150">
+<div class="mb-4 flex flex-col justify-between gap-5 rounded-xl border border-neutral-200/90 bg-white p-4 shadow-2xs transition duration-150 hover:border-neutral-300 sm:p-5 md:p-6 lg:flex-row lg:items-center">
     <!-- Left + Center Content -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5 flex-1 min-w-0">
+    <div class="flex min-w-0 flex-1 flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
         <!-- Gear Photo / Cinema Rig Thumbnail -->
-        <div class="w-full sm:w-44 md:w-48 h-32 rounded-[6px] overflow-hidden bg-neutral-900 shrink-0 flex items-center justify-center relative border border-neutral-800">
+        <div class="relative flex h-40 w-full shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 sm:h-32 sm:w-44 md:w-48">
             @if ($gearImage)
                 <img src="{{ $gearImage }}"
                      alt="{{ $productName }}"
@@ -64,7 +64,7 @@
             </div>
 
             <!-- Product Title -->
-            <h2 class="text-base md:text-lg font-bold text-black leading-snug truncate">
+            <h2 class="line-clamp-2 text-base font-bold leading-snug text-black sm:line-clamp-1 md:text-lg">
                 {{ $productName }}
             </h2>
 
@@ -110,14 +110,12 @@
     </div>
 
     <!-- Right Side: Total Bill & Actions -->
-    <div class="flex flex-col lg:items-end justify-between self-stretch lg:self-center pt-3 lg:pt-0 border-t lg:border-t-0 border-neutral-100 flex-shrink-0">
-        <div class="lg:text-right">
-            <span class="block text-[10px] font-semibold tracking-wider text-neutral-400 uppercase">TOTAL TAGIHAN</span>
-            <div class="text-xl font-extrabold text-black mt-0.5">{{ $formattedTotal }}</div>
+    <div class="flex flex-col justify-between gap-3 self-stretch border-t border-neutral-100 pt-3 lg:items-end lg:border-t-0 lg:pt-0">
+        <div class="flex items-center justify-between gap-3 lg:block lg:text-right">
+            <span class="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400">TOTAL TAGIHAN</span>
+            <div class="text-lg font-extrabold text-black sm:text-xl">{{ $formattedTotal }}</div>
         </div>
 
-        <div class="mt-3">
-            <x-orders.order-actions :order="$order" />
-        </div>
+        <x-orders.order-actions :order="$order" />
     </div>
 </div>
