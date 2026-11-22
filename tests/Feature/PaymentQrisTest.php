@@ -76,12 +76,36 @@ it('creates a pending QRIS payment order from checkout', function () {
         ->and($order['gross_amount'])->toBe(100000)
         ->and($order['tipe_bayar'])->toBe('dp_50')
         ->and($order['status'])->toBe('pending')
-        ->and(session('mirrorcam_cart'))->toBeNull()
-        ->and(session('mirrorcam_trx_code'))->toBeNull();
+        ->and(session('mirrorcam_cart'))->toHaveKey('item-1')
+        ->and(session('mirrorcam_trx_code'))->toBe('MC-TEST-0001');
 
     $this->get(route('keranjang.index'))
         ->assertOk()
-        ->assertSee('Keranjang sewa kamu masih kosong');
+        ->assertSee('Kamera Test')
+        ->assertDontSee('Keranjang sewa kamu masih kosong');
+});
+
+it('reuses the pending order when the same cart is checked out again', function () {
+    $user = paymentTestCreateUser();
+
+    $this->actingAs($user)->withSession([
+        'mirrorcam_cart' => paymentTestCart(),
+        'mirrorcam_trx_code' => 'MC-TEST-0002',
+    ])->post(route('keranjang.checkout'), [
+        'tipe_bayar' => 'dp_50',
+    ]);
+
+    $firstOrder = array_values(session('mirrorcam_payments'))[0];
+
+    $response = $this->actingAs($user)->post(route('keranjang.checkout'), [
+        'tipe_bayar' => 'dp_50',
+    ]);
+
+    $response->assertRedirect();
+    expect($response->headers->get('Location'))->toContain('/pembayaran/'.$firstOrder['token']);
+
+    expect(session('mirrorcam_payments'))->toHaveCount(1)
+        ->and(session('mirrorcam_cart'))->toHaveKey('item-1');
 });
 
 it('shows the QRIS popup with the payment amount in demo mode', function () {

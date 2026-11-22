@@ -2,17 +2,17 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\DetailPemesananTenant;
 use App\Models\Produk;
+use App\Models\User;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PaymentOrderService
 {
@@ -97,6 +97,7 @@ class PaymentOrderService
                     ]);
                     $ids[] = $booking->id_pemesanan;
                 }
+
                 return $ids;
             });
             $order['booking_ids'] = $bookingIds;
@@ -131,6 +132,48 @@ class PaymentOrderService
         }
 
         return $order;
+    }
+
+    /**
+     * Find an existing, still-payable order for the same cart items and
+     * payment type so checkout does not create duplicate bookings.
+     *
+     * @param  Collection<int, array<string, mixed>>  $cartItems
+     * @return array<string, mixed>|null
+     */
+    public function findReusablePendingOrder(Collection $cartItems, string $tipeBayar): ?array
+    {
+        $itemKeys = $cartItems->pluck('item_key')->filter()->sort()->values()->all();
+
+        if ($itemKeys === []) {
+            return null;
+        }
+
+        $payments = $this->prune(session()->get(self::SESSION_KEY, []));
+
+        foreach (array_reverse($payments, true) as $order) {
+            if (($order['status'] ?? null) !== 'pending' || ($order['tipe_bayar'] ?? null) !== $tipeBayar) {
+                continue;
+            }
+
+            $orderKeys = collect($order['items'] ?? [])->pluck('item_key')->filter()->sort()->values()->all();
+
+            if ($orderKeys !== $itemKeys) {
+                continue;
+            }
+
+            try {
+                if (Carbon::parse((string) ($order['expires_at'] ?? ''))->isPast()) {
+                    continue;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+
+            return $order;
+        }
+
+        return null;
     }
 
     /**

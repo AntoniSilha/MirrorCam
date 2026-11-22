@@ -18,8 +18,8 @@
             <!-- Info Kiri: Logo + Nama + Bio -->
             <div class="flex items-start gap-4">
                 <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-[4px] bg-[#000000] text-[#ffffff] flex items-center justify-center font-bold text-xl sm:text-2xl shrink-0 overflow-hidden shadow-xs">
-                    @if (!empty($tenant->url_logo))
-                        <img src="{{ $tenant->url_logo }}" alt="{{ $tenant->nama_toko }}" class="w-full h-full object-cover">
+                    @if (!empty($tenant->logo_url))
+                        <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->nama_toko }}" class="w-full h-full object-cover">
                     @else
                         <span>{{ $tenant->initials }}</span>
                     @endif

@@ -7,8 +7,8 @@
             <div class="flex items-center gap-3 min-w-0">
                 <!-- Kotak inisial 2 huruf atau Logo -->
                 <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[4px] bg-[#000000] text-[#ffffff] flex items-center justify-center font-bold text-sm sm:text-base shrink-0 overflow-hidden shadow-xs">
-                    @if (!empty($tenant->url_logo))
-                        <img src="{{ $tenant->url_logo }}" alt="{{ $tenant->nama_toko }}" class="w-full h-full object-cover">
+                    @if (!empty($tenant->logo_url))
+                        <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->nama_toko }}" class="w-full h-full object-cover">
                     @else
                         <span>{{ $tenant->initials }}</span>
                     @endif

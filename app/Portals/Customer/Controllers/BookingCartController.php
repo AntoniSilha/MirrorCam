@@ -198,6 +198,14 @@ class BookingCartController extends Controller
             ]);
         }
 
+        $existingOrder = $this->paymentOrders->findReusablePendingOrder($cartItems, $validated['tipe_bayar']);
+
+        if ($existingOrder) {
+            return redirect()
+                ->route('pembayaran.show', ['token' => $existingOrder['token']])
+                ->with('success', 'Pesanan ini masih menunggu pembayaran. Silakan selesaikan pembayaran QRIS.');
+        }
+
         $order = $this->paymentOrders->create(
             $user,
             $validated['tipe_bayar'],
@@ -207,10 +215,8 @@ class BookingCartController extends Controller
             (int) $verification->id_ktp
         );
 
-        session()->forget(['mirrorcam_cart', 'mirrorcam_trx_code']);
-
         return redirect()
             ->route('pembayaran.show', ['token' => $order['token']])
-            ->with('success', 'Pesanan dibuat. Silakan selesaikan pembayaran QRIS.');
+            ->with('success', 'Pesanan dibuat. Keranjang tetap tersimpan sampai pembayaran atau DP berhasil.');
     }
 }

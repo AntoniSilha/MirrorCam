@@ -101,7 +101,7 @@ class GetTenantDashboardMetricsUseCase
 
         $growth = $previousMonthRevenue > 0
             ? (($currentMonthRevenue - $previousMonthRevenue) / $previousMonthRevenue) * 100
-            : 0.0;
+            : ($currentMonthRevenue > 0 ? 100.0 : 0.0);
 
         $daysElapsed = max(1, Carbon::now()->day);
         $averageDailyRevenue = $netRevenue / $daysElapsed;

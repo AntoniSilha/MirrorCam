@@ -29,8 +29,7 @@ class MitraRegisterController extends Controller
             ->first();
 
         if ($existingTenant || $user?->role === 'mitra') {
-            return redirect()->route('mitra.dashboard')
-                ->with('status', 'Anda sudah mendaftarkan akun mitra. Silakan tunggu verifikasi admin.');
+            return $this->redirectToDashboard($existingTenant);
         }
 
         return view('pages.auth.register-mitra');
@@ -49,9 +48,10 @@ class MitraRegisterController extends Controller
                 ->withInput();
         }
 
-        if (Tenant::query()->where('id_akun_pemilik', $user->id_akun)->exists()) {
-            return redirect()->route('mitra.dashboard')
-                ->with('status', 'Anda sudah mendaftarkan akun mitra. Silakan tunggu verifikasi admin.');
+        $existingTenant = Tenant::query()->where('id_akun_pemilik', $user->id_akun)->first();
+
+        if ($existingTenant) {
+            return $this->redirectToDashboard($existingTenant);
         }
 
         $validated = $request->validated();
@@ -106,5 +106,18 @@ class MitraRegisterController extends Controller
 
         return redirect()->route('mitra.dashboard')
             ->with('status', 'Pendaftaran mitra berhasil disimpan dan menunggu verifikasi.');
+    }
+
+    /**
+     * Redirect an existing mitra account to the dashboard with a status
+     * message that reflects the current verification state.
+     */
+    private function redirectToDashboard(?Tenant $tenant): RedirectResponse
+    {
+        $status = $tenant?->is_official
+            ? 'Akun mitra Anda sudah terverifikasi dan aktif.'
+            : 'Anda sudah mendaftarkan akun mitra. Silakan tunggu verifikasi admin.';
+
+        return redirect()->route('mitra.dashboard')->with('status', $status);
     }
 }

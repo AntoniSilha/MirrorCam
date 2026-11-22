@@ -50,7 +50,8 @@ class GetHomeCatalogUseCase
     public function getTenants(): Collection
     {
         if (Schema::hasTable('tenants')) {
-            return Tenant::withCount(['products', 'reviews'])
+            return Tenant::with(['owner'])
+                ->withCount(['products', 'reviews'])
                 ->withAvg('reviews', 'rating_nilai')
                 ->get();
         }

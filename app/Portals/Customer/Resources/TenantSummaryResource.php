@@ -4,6 +4,7 @@ namespace App\Portals\Customer\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class TenantSummaryResource extends JsonResource
 {
@@ -28,9 +29,15 @@ class TenantSummaryResource extends JsonResource
             ? ($this->resource->category_label ?? $this->resource->subtitle ?? 'Rental & Service')
             : ($this->resource['category_label'] ?? $this->resource['subtitle'] ?? 'Rental & Service');
 
-        $logo = $isModel
+        $ownerAvatar = $isModel ? ($this->resource->owner?->avatar_url ?? null) : null;
+        $tenantLogo = $isModel
             ? ($this->resource->url_logo ?? null)
             : ($this->resource['url_logo'] ?? null);
+        $logo = $ownerAvatar ?: ($tenantLogo
+            ? (Str::startsWith($tenantLogo, ['http://', 'https://', '/'])
+                ? $tenantLogo
+                : asset('storage/'.ltrim($tenantLogo, '/')))
+            : null);
 
         $bio = $isModel
             ? ($this->resource->bio_deskripsi ?? $this->resource->bio ?? '')

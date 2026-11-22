@@ -90,6 +90,21 @@ class Tenant extends Model
     }
 
     /**
+     * Accessor: Publicly accessible URL for the tenant logo.
+     * Stored files are relative paths and must be served from the storage disk.
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (empty($this->url_logo)) {
+            return null;
+        }
+
+        return Str::startsWith($this->url_logo, ['http://', 'https://'])
+            ? $this->url_logo
+            : asset('storage/'.ltrim($this->url_logo, '/'));
+    }
+
+    /**
      * Accessor: 2-letter uppercase initials for avatar box
      */
     public function getInitialsAttribute(): string

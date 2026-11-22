@@ -14,8 +14,12 @@
                     <!-- Tenant Top Header -->
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-full bg-[#000000] text-white flex items-center justify-center text-sm font-extrabold shrink-0 shadow-xs">
-                                {{ $tenant['initials'] ?? 'TN' }}
+                            <div class="w-11 h-11 rounded-full bg-[#000000] text-white flex items-center justify-center text-sm font-extrabold shrink-0 overflow-hidden shadow-xs">
+                                @if (!empty($tenant['logo']))
+                                    <img src="{{ $tenant['logo'] }}" alt="Foto profil {{ $tenant['name'] }}" class="w-full h-full object-cover">
+                                @else
+                                    {{ $tenant['initials'] ?? 'TN' }}
+                                @endif
                             </div>
                             <div>
                                 <h3 class="text-sm font-bold text-[#000000] group-hover:underline">{{ $tenant['name'] }}</h3>
