@@ -53,6 +53,17 @@ class GetTenantDashboardMetricsUseCase
         $categories = KategoriProduk::query()->pluck('nama_kategori', 'id_kategori');
         $productsById = $products->keyBy('id_produk');
 
+        foreach ($bookings as $booking) {
+            if ((float) $booking->total_harga > 0 && ! KomisiPlatform::query()->where('id_pemesanan', $booking->id_pemesanan)->exists()) {
+                KomisiPlatform::create([
+                    'id_pemesanan' => $booking->id_pemesanan,
+                    'persentase_komisi_platform' => 10.00,
+                    'total_komisi' => round((float) $booking->total_harga * 0.10, 2),
+                    'status_komisi' => 'Menunggu',
+                ]);
+            }
+        }
+
         $commissions = KomisiPlatform::query()
             ->whereIn('id_pemesanan', $bookings->pluck('id_pemesanan'))
             ->orderByDesc('created_at')
@@ -124,11 +135,12 @@ class GetTenantDashboardMetricsUseCase
             $booking = $bookings->firstWhere('id_pemesanan', $commission->id_pemesanan);
 
             return [
-                'kode' => 'KOM-'.str_pad((string) $commission->id_komisi, 4, '0', STR_PAD_LEFT),
+                'kode' => $commission->kode_komisi_formatted,
                 'tanggal' => $this->formatDate($commission->created_at),
                 'persen' => (float) $commission->persentase_komisi_platform,
                 'komisi' => (float) $commission->total_komisi,
                 'pendapatan' => $booking ? (float) $booking->total_harga : 0.0,
+                'status' => $commission->status_label,
             ];
         })->values();
 
@@ -189,9 +201,23 @@ class GetTenantDashboardMetricsUseCase
      */
     protected function commissionBilling(Tenant $tenant, Collection $commissions): array
     {
-        $amount = (float) $commissions->sum('total_komisi');
+        $unpaidCommissions = $commissions->filter(
+            fn (KomisiPlatform $item): bool => Str::lower((string) ($item->status_komisi ?? 'menunggu')) !== 'lunas'
+        );
 
-        if ($commissions->isEmpty() || $amount <= 0.0) {
+        $paidHistory = $commissions->filter(
+            fn (KomisiPlatform $item): bool => Str::lower((string) ($item->status_komisi ?? '')) === 'lunas'
+        )->map(fn (KomisiPlatform $item): array => [
+            'kode' => $item->kode_komisi_formatted,
+            'tanggal_bayar' => $this->formatDate($item->paid_at ?? $item->updated_at),
+            'jumlah' => (float) $item->total_komisi,
+            'metode' => $item->metode_pembayaran ?: 'QRIS Otomatis',
+            'referensi' => $item->referensi_pembayaran ?: '-',
+        ])->values()->all();
+
+        $amount = (float) $unpaidCommissions->sum('total_komisi');
+
+        if ($unpaidCommissions->isEmpty() || $amount <= 0.0) {
             return [
                 'has_bill' => false,
                 'amount' => 0.0,
@@ -199,11 +225,12 @@ class GetTenantDashboardMetricsUseCase
                 'jatuh_tempo' => null,
                 'reference' => null,
                 'qris_data_uri' => null,
+                'paid_history' => $paidHistory,
             ];
         }
 
-        $firstDate = Carbon::instance(new \DateTimeImmutable((string) $commissions->min('created_at')));
-        $lastDate = Carbon::instance(new \DateTimeImmutable((string) $commissions->max('created_at')));
+        $firstDate = Carbon::instance(new \DateTimeImmutable((string) $unpaidCommissions->min('created_at')));
+        $lastDate = Carbon::instance(new \DateTimeImmutable((string) $unpaidCommissions->max('created_at')));
         $firstDate->locale('id');
         $lastDate->locale('id');
 
@@ -216,7 +243,8 @@ class GetTenantDashboardMetricsUseCase
         $reference = 'KOM-'.$tenant->id_tenant.'-'.$lastDate->format('Ym');
 
         $payload = implode('|', [
-            'MIRRORCAM-COMMISSION',
+            '000201010212',
+            'MERCHANT:PT. MIRRORCAM',
             'TENANT:'.$tenant->nama_toko,
             'AMOUNT:'.number_format($amount, 0, '', ''),
             'PERIOD:'.$periode,
@@ -230,6 +258,7 @@ class GetTenantDashboardMetricsUseCase
             'jatuh_tempo' => $dueDate->translatedFormat('d F Y'),
             'reference' => $reference,
             'qris_data_uri' => $this->qrisDataUri($payload),
+            'paid_history' => $paidHistory,
         ];
     }
 
@@ -292,6 +321,7 @@ class GetTenantDashboardMetricsUseCase
                 'jatuh_tempo' => null,
                 'reference' => null,
                 'qris_data_uri' => null,
+                'paid_history' => [],
             ],
         ];
     }

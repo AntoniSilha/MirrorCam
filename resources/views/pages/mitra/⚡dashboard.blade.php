@@ -4,6 +4,7 @@ use App\Modules\TenantManagement\Concerns\BuildsRevenueChart;
 use App\Modules\TenantManagement\Concerns\ManagesTenantProducts;
 use App\Modules\TenantManagement\Concerns\ManagesTenantProfile;
 use App\Modules\TenantManagement\UseCases\GetTenantDashboardMetricsUseCase;
+use App\Modules\TenantManagement\Concerns\ManagesCommissionQris;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -19,6 +20,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
     use ManagesTenantProducts;
     use ManagesTenantProfile;
     use WithFileUploads;
+    use ManagesCommissionQris;
 
     public string $section = 'ringkasan';
 
