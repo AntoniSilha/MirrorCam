@@ -14,6 +14,19 @@ class Produk extends Model
 
     protected $guarded = [];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Produk $produk) {
+            $val = $produk->attributes['total_stock_unit'] ?? $produk->attributes['total_stok_unit'] ?? 1;
+            if (\Illuminate\Support\Facades\Schema::hasColumn('produks', 'total_stok_unit')) {
+                $produk->attributes['total_stok_unit'] = $val;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('produks', 'total_stock_unit')) {
+                $produk->attributes['total_stock_unit'] = $val;
+            }
+        });
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class, 'id_tenant', 'id_tenant');
@@ -32,6 +45,16 @@ class Produk extends Model
     public function durasi(): HasMany
     {
         return $this->hasMany(DurasiProduk::class, 'id_produk', 'id_produk');
+    }
+
+    public function getTotalStockUnitAttribute(): int
+    {
+        return (int) ($this->attributes['total_stock_unit'] ?? $this->attributes['total_stok_unit'] ?? 0);
+    }
+
+    public function getTotalStokUnitAttribute(): int
+    {
+        return (int) ($this->attributes['total_stok_unit'] ?? $this->attributes['total_stock_unit'] ?? 0);
     }
 
     public function getPrimaryImageAttribute(): string

@@ -45,8 +45,84 @@ if (app()->environment('local')) {
         $user = \App\Models\User::first();
         if ($user) {
             \Illuminate\Support\Facades\Auth::login($user);
-            return redirect()->route('pengaduan.index')->with('status', 'Berhasil login sebagai ' . $user->name . ' untuk testing.');
+            return redirect()->route('home')->with('status', 'Berhasil login sebagai ' . $user->name . ' untuk testing.');
         }
         return 'Tidak ada akun user di database.';
     })->name('dev.login');
+
+    Route::get('/dev-login-mitra', function () {
+        $user = \App\Models\User::first();
+        if (! $user) {
+            return 'Tidak ada akun user di database.';
+        }
+        \Illuminate\Support\Facades\Auth::login($user);
+
+        // Jika user belum memiliki profil tenant, buatkan otomatis untuk testing di lokal
+        $tenant = \App\Models\Tenant::where('id_akun_pemilik', $user->id_akun)->first();
+        if (! $tenant && $user->id_user_google) {
+            \App\Models\Tenant::create([
+                'google_id_token' => $user->id_user_google,
+                'id_akun_pemilik' => $user->id_akun,
+                'nama_toko' => 'MirrorCam Rental Store',
+                'bio_deskripsi' => 'Pusat sewa kamera dan lensa profesional.',
+                'whatsapp_resmi' => $user->no_whatsapp ?: '081234567890',
+                'nama_penanggungjawab' => $user->name,
+                'jabatan_penanggungjawab' => 'Owner',
+                'email_resmi' => $user->email ?: 'mitra@mirrorcam.test',
+                'alamat_toko' => 'Jl. Sudirman No. 12, Jakarta',
+                'status_mitra' => 'aktif',
+            ]);
+        }
+
+        return redirect()->route('mitra.dashboard')->with('status', 'Berhasil login sebagai Mitra (' . $user->name . ').');
+    })->name('dev.login.mitra');
+
+    Route::get('/dev-create-order', function () {
+        $user = \App\Models\User::first();
+        if (! $user) {
+            return 'User belum ada.';
+        }
+        $tenant = \App\Models\Tenant::where('id_akun_pemilik', $user->id_akun)->first();
+        if (! $tenant) {
+            return redirect()->route('dev.login.mitra');
+        }
+        $kategori = \App\Models\KategoriProduk::first();
+        $produk = \App\Models\Produk::firstOrCreate(
+            ['id_tenant' => $tenant->id_tenant, 'nama_produk' => 'Sony Alpha A7 IV Body Only'],
+            [
+                'id_kategori' => $kategori ? $kategori->id_kategori : 1,
+                'deskripsi_lengkap' => 'Kamera mirrorless full-frame profesional 33MP.',
+                'harga_sewa' => 250000,
+                'total_stock_unit' => 5,
+            ]
+        );
+        $ktp = \App\Models\VerifikasiKtp::firstOrCreate(
+            ['id_akun' => $user->id_akun],
+            [
+                'nik_ktp' => $user->nik_ktp ?: '3510121611060002',
+                'url_foto_ktp' => $user->foto_ktp ?: 'ktp/sample.jpg',
+                'status_verifikasi' => 'terverifikasi',
+                'waktu_verifikasi' => now(),
+            ]
+        );
+        $booking = \App\Models\DetailPemesananTenant::create([
+            'sub_order_eksternal' => 'MC-ORD-' . rand(1000, 9999),
+            'id_tenant' => $tenant->id_tenant,
+            'id_produk' => $produk->id_produk,
+            'id_ktp' => $ktp->id_ktp,
+            'url_foto_ktp' => $ktp->url_foto_ktp,
+            'waktu_ambil_booking' => now(),
+            'waktu_kembali_booking' => now()->addDays(2),
+            'durasi_sewa_hari' => 2,
+            'harga_sewa_booking' => 250000,
+            'total_harga' => 500000,
+            'status_harga' => 'dp',
+            'nominal_dp' => 250000,
+            'sisa_tagihan' => 250000,
+            'is_payment_verified' => false,
+            'status_sewa' => 'menunggu_serah_terima',
+        ]);
+
+        return redirect()->route('mitra.dashboard')->with('status', 'Pesanan testing ' . $booking->sub_order_eksternal . ' berhasil dibuat untuk menguji alur checklist!');
+    })->name('dev.create.order');
 }

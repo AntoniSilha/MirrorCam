@@ -58,6 +58,30 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 
     public string $bookingSearch = '';
 
+    public bool $showChecklistModal = false;
+
+    public ?int $selectedBookingId = null;
+
+    public string $catatanPembayaran = '';
+
+    public bool $checklistIdentitasOk = false;
+
+    public bool $checklistKondisiAwalOk = false;
+
+    public $fotoKondisiAwal = null;
+
+    public string $catatanSerahTerima = '';
+
+    public bool $checklistKondisiAkhirOk = false;
+
+    public string $kondisiKerusakan = 'baik';
+
+    public string $deskripsiKerusakan = '';
+
+    public string $estimasiBiayaKerusakan = '0';
+
+    public $fotoKondisiAkhir = null;
+
     public function mount(): void
     {
         $this->autoAcceptBooking = (bool) session('mitra.auto_accept_booking', true);
@@ -289,7 +313,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         ]);
 
         DB::transaction(function () use ($tenant, $validated): void {
-            $produk = Produk::query()->create([
+            $productData = [
                 'id_tenant' => $tenant->id_tenant,
                 'id_kategori' => (int) $validated['id_kategori'],
                 'nama_produk' => $validated['nama_produk'],
@@ -297,7 +321,13 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                 'deskripsi_lengkap' => $validated['deskripsi_lengkap'] ?: '-',
                 'harga_sewa' => $validated['harga_sewa'],
                 'total_stock_unit' => (int) $validated['total_stock_unit'],
-            ]);
+            ];
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn('produks', 'total_stok_unit')) {
+                $productData['total_stok_unit'] = (int) $validated['total_stock_unit'];
+            }
+
+            $produk = Produk::query()->create($productData);
 
             foreach ($validated['durasi_terpilih'] as $kodeDurasi) {
                 DurasiProduk::query()->create([
@@ -412,16 +442,165 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         return 'Rp '.number_format($amount, 0, ',', '.');
     }
 
+    public function openChecklistModal(int $bookingId): void
+    {
+        $this->selectedBookingId = $bookingId;
+        $this->resetChecklistForm();
+        $this->showChecklistModal = true;
+    }
+
+    public function closeChecklistModal(): void
+    {
+        $this->showChecklistModal = false;
+        $this->resetChecklistForm();
+    }
+
+    public function resetChecklistForm(): void
+    {
+        $this->resetValidation();
+        $this->catatanPembayaran = '';
+        $this->checklistIdentitasOk = false;
+        $this->checklistKondisiAwalOk = false;
+        $this->fotoKondisiAwal = null;
+        $this->catatanSerahTerima = '';
+        $this->checklistKondisiAkhirOk = false;
+        $this->kondisiKerusakan = 'baik';
+        $this->deskripsiKerusakan = '';
+        $this->estimasiBiayaKerusakan = '0';
+        $this->fotoKondisiAkhir = null;
+    }
+
+    #[Computed]
+    public function selectedBooking(): ?array
+    {
+        if (! $this->selectedBookingId) {
+            return null;
+        }
+
+        foreach ($this->dashboard['bookings'] as $booking) {
+            if ($booking['id'] === $this->selectedBookingId) {
+                return $booking;
+            }
+        }
+
+        return null;
+    }
+
+    public function verifyPayment(int $bookingId): void
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        try {
+            app(\App\Services\Mitra\OrderChecklistService::class)->verifyPayment(
+                $user,
+                $bookingId,
+                ['catatan' => $this->catatanPembayaran]
+            );
+
+            unset($this->dashboard, $this->chart);
+            session()->flash('status', 'Tahap 1 Berhasil: Pelunasan pembayaran telah diverifikasi.');
+        } catch (\Throwable $e) {
+            $this->addError('checklist_payment', $e->getMessage());
+        }
+    }
+
+    public function confirmHandover(int $bookingId): void
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $this->validate([
+            'checklistIdentitasOk' => ['accepted'],
+            'checklistKondisiAwalOk' => ['accepted'],
+            'fotoKondisiAwal' => ['nullable', 'image', 'max:5120'],
+        ], [
+            'checklistIdentitasOk.accepted' => 'Verifikasi kecocokan identitas KTP pelanggan wajib dicentang.',
+            'checklistKondisiAwalOk.accepted' => 'Verifikasi kelengkapan unit wajib dicentang.',
+            'fotoKondisiAwal.image' => 'File foto serah terima harus berupa gambar.',
+        ]);
+
+        $fotoPath = null;
+        if ($this->fotoKondisiAwal) {
+            $path = $this->fotoKondisiAwal->store('checklist/handover', 'public');
+            if ($path) {
+                $fotoPath = Storage::disk('public')->url($path);
+            }
+        }
+
+        try {
+            app(\App\Services\Mitra\OrderChecklistService::class)->confirmHandover($user, $bookingId, [
+                'identitas_terverifikasi' => $this->checklistIdentitasOk,
+                'kondisi_fisik_awal_ok' => $this->checklistKondisiAwalOk,
+                'foto_kondisi_awal' => $fotoPath,
+                'catatan' => $this->catatanSerahTerima,
+            ]);
+
+            unset($this->dashboard, $this->chart);
+            $this->fotoKondisiAwal = null;
+            session()->flash('status', 'Tahap 2 Berhasil: Barang telah diserahterimakan & status berubah menjadi Sedang Disewa.');
+        } catch (\Throwable $e) {
+            $this->addError('checklist_handover', $e->getMessage());
+        }
+    }
+
+    public function confirmReturn(int $bookingId): void
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $rules = [
+            'checklistKondisiAkhirOk' => ['accepted'],
+            'kondisiKerusakan' => ['required', 'in:baik,rusak'],
+            'fotoKondisiAkhir' => ['nullable', 'image', 'max:5120'],
+        ];
+
+        if ($this->kondisiKerusakan === 'rusak') {
+            $rules['deskripsiKerusakan'] = ['required', 'string', 'min:5', 'max:1000'];
+            $rules['estimasiBiayaKerusakan'] = ['required', 'numeric', 'min:0'];
+        }
+
+        $this->validate($rules, [
+            'checklistKondisiAkhirOk.accepted' => 'Pemeriksaan kelengkapan fisik akhir wajib dicentang.',
+            'deskripsiKerusakan.required' => 'Deskripsi kerusakan wajib diisi jika ditemukan kerusakan pada unit.',
+            'estimasiBiayaKerusakan.required' => 'Estimasi biaya klaim kerusakan wajib diisi.',
+            'fotoKondisiAkhir.image' => 'File foto pengembalian harus berupa gambar.',
+        ]);
+
+        $fotoPath = null;
+        if ($this->fotoKondisiAkhir) {
+            $path = $this->fotoKondisiAkhir->store('checklist/return', 'public');
+            if ($path) {
+                $fotoPath = Storage::disk('public')->url($path);
+            }
+        }
+
+        try {
+            app(\App\Services\Mitra\OrderChecklistService::class)->confirmReturn($user, $bookingId, [
+                'kondisi_fisik_akhir_ok' => $this->checklistKondisiAkhirOk,
+                'kondisi_kerusakan' => $this->kondisiKerusakan,
+                'deskripsi_kerusakan' => $this->deskripsiKerusakan,
+                'estimasi_biaya_kerusakan' => (float) $this->estimasiBiayaKerusakan,
+                'foto_kondisi_akhir' => $fotoPath,
+            ]);
+
+            unset($this->dashboard, $this->chart);
+            $this->fotoKondisiAkhir = null;
+            session()->flash('status', 'Tahap 3 Berhasil: Pengembalian unit telah diverifikasi dan peminjaman selesai.');
+        } catch (\Throwable $e) {
+            $this->addError('checklist_return', $e->getMessage());
+        }
+    }
+
     public function statusBadgeClasses(string $status): string
     {
         $normalized = strtolower($status);
 
         return match (true) {
-            str_contains($normalized, 'selesai') => 'border-[#fde68a] bg-[#fef3c7] text-[#a16207]',
-            str_contains($normalized, 'batal') => 'border-[#fecaca] bg-[#fee2e2] text-[#b91c1c]',
-            str_contains($normalized, 'disewa'), str_contains($normalized, 'aktif') => 'border-[#bbf7d0] bg-[#dcfce7] text-[#15803d]',
-            str_contains($normalized, 'habis') => 'border-[#fecaca] bg-[#fee2e2] text-[#b91c1c]',
-            default => 'border-[#d1d5db] bg-[#f3f4f6] text-[#374151]',
+            str_contains($normalized, 'selesai') || str_contains($normalized, 'completed') || str_contains($normalized, 'lunas') => 'border-[#fff700] bg-[#fff700] text-[#000000] rounded-[4px]',
+            str_contains($normalized, 'disputed') || str_contains($normalized, 'sengketa') || str_contains($normalized, 'terlambat') || str_contains($normalized, 'overdue') || str_contains($normalized, 'batal') || str_contains($normalized, 'habis') => 'border-[#ffdad6] bg-[#ffdad6] text-[#ba1a1a] rounded-[4px]',
+            str_contains($normalized, 'disewa') || str_contains($normalized, 'aktif') || str_contains($normalized, 'in_use') => 'border-[#dcfce7] bg-[#dcfce7] text-[#16a34a] rounded-[4px]',
+            default => 'border-[#d1d5db] bg-[#f3f4f6] text-[#374151] rounded-[4px]',
         };
     }
 
@@ -858,11 +1037,11 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                         </div>
                     </section>
                 @elseif ($section === 'pesanan')
-                    <section class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                    <section class="overflow-hidden rounded-[4px] border border-neutral-200 bg-[#ffffff] shadow-[0_1px_2px_rgba(0,0,0,0.02)] font-['Montserrat',sans-serif]">
                         <div class="flex flex-col gap-4 border-b border-neutral-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between md:px-6">
                             <div>
-                                <h1 class="text-lg font-bold tracking-tight text-black">Kelola Pesanan Sewa</h1>
-                                <p class="mt-1 text-xs text-neutral-500">Daftar pesanan terbaru beserta status penyewaan unit.</p>
+                                <h1 class="text-lg font-bold tracking-tight text-[#000000]">Kelola Pesanan Sewa</h1>
+                                <p class="mt-1 text-xs text-neutral-500">Daftar pesanan terbaru beserta status penyewaan unit & alur checklist operasional.</p>
                             </div>
 
                             <div class="relative w-full sm:w-72">
@@ -871,37 +1050,82 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                                     </svg>
                                 </span>
-                                <input type="search" wire:model.live.debounce.300ms="bookingSearch" autocomplete="off" placeholder="Cari kode, produk, penyewa, status..." class="w-full rounded-md border border-neutral-300 bg-white py-2.5 pl-9 pr-3 text-xs text-black outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-1 focus:ring-black">
+                                <input type="search" wire:model.live.debounce.300ms="bookingSearch" autocomplete="off" placeholder="Cari kode, produk, penyewa, status..." class="w-full rounded-[4px] border border-neutral-300 bg-white py-2.5 pl-9 pr-3 text-xs text-[#000000] outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-1 focus:ring-black">
                             </div>
                         </div>
 
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[860px] text-left text-xs">
-                                <thead class="bg-neutral-50 text-[10px] uppercase tracking-wider text-neutral-500">
+                            <table class="w-full min-w-[960px] text-left text-xs">
+                                <thead class="bg-[#f9f9f9] text-[10px] uppercase tracking-wider text-neutral-500 font-semibold">
                                     <tr>
-                                        <th class="px-6 py-3 font-semibold">Kode</th>
-                                        <th class="px-6 py-3 font-semibold">Produk</th>
-                                        <th class="px-6 py-3 font-semibold">Penyewa</th>
-                                        <th class="px-6 py-3 font-semibold">Periode</th>
-                                        <th class="px-6 py-3 font-semibold">Status</th>
-                                        <th class="px-6 py-3 font-semibold">Total</th>
+                                        <th class="px-5 py-3">Kode</th>
+                                        <th class="px-5 py-3">Produk</th>
+                                        <th class="px-5 py-3">Penyewa</th>
+                                        <th class="px-5 py-3">Periode & Tenggat</th>
+                                        <th class="px-5 py-3">Status Sewa</th>
+                                        <th class="px-5 py-3">Pembayaran</th>
+                                        <th class="px-5 py-3">Total</th>
+                                        <th class="px-5 py-3 text-right">Alur Operasional</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-neutral-100">
                                     @forelse ($dashboard['bookings'] as $booking)
-                                        <tr class="transition hover:bg-neutral-50">
-                                            <td class="px-6 py-4 font-semibold text-black">{{ $booking['kode'] }}</td>
-                                            <td class="px-6 py-4 text-neutral-600">{{ $booking['produk'] }}</td>
-                                            <td class="px-6 py-4 text-neutral-600">{{ $booking['penyewa'] }}</td>
-                                            <td class="px-6 py-4 text-neutral-500">{{ $booking['mulai'] }} - {{ $booking['selesai'] }}</td>
-                                            <td class="px-6 py-4">
-                                                <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold {{ $this->statusBadgeClasses($booking['status']) }}">{{ $booking['status'] }}</span>
+                                        <tr class="transition hover:bg-[#f9f9f9]">
+                                            <td class="px-5 py-4 font-bold text-[#000000]">
+                                                <span>{{ $booking['kode'] }}</span>
+                                                @if (! empty($booking['is_overdue']))
+                                                    <span class="mt-0.5 block text-[10px] font-extrabold text-[#ba1a1a]">TERLAMBAT</span>
+                                                @endif
                                             </td>
-                                            <td class="px-6 py-4 font-medium text-black">{{ $this->rupiah($booking['total']) }}</td>
+                                            <td class="px-5 py-4 font-medium text-neutral-800">{{ $booking['produk'] }}</td>
+                                            <td class="px-5 py-4 text-neutral-700">
+                                                <div class="font-semibold text-black">{{ $booking['penyewa'] }}</div>
+                                                <div class="text-[10px] text-neutral-400">NIK: {{ $booking['nik_ktp'] }}</div>
+                                            </td>
+                                            <td class="px-5 py-4">
+                                                <div class="text-neutral-600">{{ $booking['mulai'] }} - {{ $booking['selesai'] }}</div>
+                                                @if (! empty($booking['is_in_use']))
+                                                    <div class="mt-1 text-[11px] font-semibold text-[#B45309]">
+                                                        Tenggat: {{ $booking['return_deadline'] }}
+                                                        @if (! empty($booking['is_overdue']))
+                                                            <span class="font-bold text-[#ba1a1a]">(Lewat Tenggat)</span>
+                                                        @endif
+                                                    </div>
+                                                @elseif (! empty($booking['actual_returned_at']))
+                                                    <div class="mt-1 text-[10px] text-neutral-400">
+                                                        Kembali: {{ $booking['actual_returned_at'] }}
+                                                    </div>
+                                                @endif
+                                            </td>
+                                            <td class="px-5 py-4">
+                                                <span class="inline-flex items-center rounded-[4px] border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ $this->statusBadgeClasses($booking['status']) }}">
+                                                    {{ $booking['status'] }}
+                                                </span>
+                                            </td>
+                                            <td class="px-5 py-4">
+                                                @if (! empty($booking['is_payment_verified']))
+                                                    <span class="inline-flex items-center rounded-[4px] border border-[#fff700] bg-[#fff700] px-2 py-0.5 text-[10px] font-bold text-[#000000]">
+                                                        LUNAS
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] px-2 py-0.5 text-[10px] font-bold text-[#ba1a1a]">
+                                                        {{ strtoupper($booking['status_harga']) }} (Sisa: {{ $this->rupiah($booking['sisa_tagihan']) }})
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td class="px-5 py-4 font-bold text-[#000000]">{{ $this->rupiah($booking['total']) }}</td>
+                                            <td class="px-5 py-4 text-right">
+                                                <button type="button" wire:click="openChecklistModal({{ $booking['id'] }})" class="inline-flex items-center gap-1.5 rounded-[4px] bg-[#000000] px-3 py-1.5 text-[11px] font-bold text-[#ffffff] shadow-xs transition hover:bg-neutral-800">
+                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4" />
+                                                    </svg>
+                                                    <span>Checklist Alur</span>
+                                                </button>
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-12 text-center text-xs text-neutral-500">
+                                            <td colspan="8" class="px-6 py-12 text-center text-xs text-neutral-500">
                                                 @if (trim($bookingSearch) !== '')
                                                     Tidak ada pesanan yang cocok dengan pencarian "{{ $bookingSearch }}".
                                                 @else
@@ -1279,6 +1503,404 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
                         <button type="submit" wire:loading.attr="disabled" wire:target="saveProduct, fotos" class="rounded-md bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60">Simpan Produk</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODAL CHECKLIST ALUR OPERASIONAL PESANAN (SRS ALIGNED) --}}
+    @if ($showChecklistModal && $this->selectedBooking)
+        @php
+            $active = $this->selectedBooking;
+            $stage1Done = ! empty($active['is_payment_verified']);
+            $stage2Done = ! empty($active['is_in_use']) || ! empty($active['is_completed']) || ! empty($active['is_disputed']);
+            $stage3Done = ! empty($active['is_completed']) || ! empty($active['is_disputed']);
+        @endphp
+        <div class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/60 p-4 font-['Montserrat',sans-serif]" wire:click.self="closeChecklistModal">
+            <div class="relative w-full max-w-3xl overflow-hidden rounded-[4px] border border-neutral-200 bg-[#ffffff] shadow-2xl">
+                <!-- Modal Header -->
+                <div class="flex items-start justify-between border-b border-neutral-200 bg-[#ffffff] px-6 py-5">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="rounded-[4px] bg-black px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Checklist Operasional Pesanan</span>
+                            <span class="text-xs font-bold text-neutral-500">Kode: {{ $active['kode'] }}</span>
+                        </div>
+                        <h2 class="mt-1 text-base font-bold text-[#000000]">{{ $active['produk'] }}</h2>
+                        <p class="text-xs text-neutral-500">Penyewa: <span class="font-bold text-black">{{ $active['penyewa'] }}</span> (NIK: {{ $active['nik_ktp'] }}) • Periode: {{ $active['mulai'] }} s/d {{ $active['selesai'] }}</p>
+                    </div>
+                    <button type="button" wire:click="closeChecklistModal" class="rounded-[4px] p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-black">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="max-h-[75vh] space-y-6 overflow-y-auto p-6">
+                    @if (session()->has('status'))
+                        <div class="rounded-[4px] border border-[#dcfce7] bg-[#dcfce7] px-4 py-3 text-xs font-bold text-[#16a34a]">
+                            {{ session('status') }}
+                        </div>
+                    @endif
+
+                    @error('checklist_payment')
+                        <div class="rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] px-4 py-3 text-xs font-bold text-[#ba1a1a]">
+                            {{ $message }}
+                        </div>
+                    @enderror
+                    @error('checklist_handover')
+                        <div class="rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] px-4 py-3 text-xs font-bold text-[#ba1a1a]">
+                            {{ $message }}
+                        </div>
+                    @enderror
+                    @error('checklist_return')
+                        <div class="rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] px-4 py-3 text-xs font-bold text-[#ba1a1a]">
+                            {{ $message }}
+                        </div>
+                    @enderror
+
+                    <!-- Stepper Bar (Urutan Transisi Status Bertahap) -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="rounded-[4px] p-3 text-center border {{ $stage1Done ? 'bg-[#fff700]/20 border-[#fff700] text-black' : 'bg-[#f9f9f9] border-neutral-200 text-neutral-400' }}">
+                            <div class="text-[10px] font-bold uppercase tracking-wider">Tahap 1</div>
+                            <div class="text-xs font-bold {{ $stage1Done ? 'text-black' : 'text-neutral-500' }}">Pembayaran</div>
+                            <span class="mt-1 inline-block text-[10px] font-semibold {{ $stage1Done ? 'text-black font-bold' : 'text-neutral-400' }}">
+                                {{ $stage1Done ? '✓ Lunas' : 'Menunggu Pelunasan' }}
+                            </span>
+                        </div>
+                        <div class="rounded-[4px] p-3 text-center border {{ $stage2Done ? 'bg-[#dcfce7] border-[#bbf7d0] text-[#16a34a]' : ($stage1Done ? 'bg-[#f9f9f9] border-black text-black' : 'bg-[#f9f9f9] border-neutral-200 text-neutral-400') }}">
+                            <div class="text-[10px] font-bold uppercase tracking-wider">Tahap 2</div>
+                            <div class="text-xs font-bold {{ $stage2Done ? 'text-[#16a34a]' : ($stage1Done ? 'text-black' : 'text-neutral-500') }}">Serah Terima</div>
+                            <span class="mt-1 inline-block text-[10px] font-semibold {{ $stage2Done ? 'text-[#16a34a]' : 'text-neutral-400' }}">
+                                {{ $stage2Done ? '✓ Sedang Disewa' : ($stage1Done ? 'Siap Diproses' : 'Terkunci') }}
+                            </span>
+                        </div>
+                        <div class="rounded-[4px] p-3 text-center border {{ $stage3Done ? ($active['is_disputed'] ? 'bg-[#ffdad6] border-[#fca5a5] text-[#ba1a1a]' : 'bg-[#fff700] border-[#facc15] text-black') : ($active['is_in_use'] ? 'bg-[#f9f9f9] border-black text-black' : 'bg-[#f9f9f9] border-neutral-200 text-neutral-400') }}">
+                            <div class="text-[10px] font-bold uppercase tracking-wider">Tahap 3</div>
+                            <div class="text-xs font-bold {{ $stage3Done ? ($active['is_disputed'] ? 'text-[#ba1a1a]' : 'text-black') : 'text-neutral-500' }}">Pengembalian</div>
+                            <span class="mt-1 inline-block text-[10px] font-semibold {{ $stage3Done ? ($active['is_disputed'] ? 'text-[#ba1a1a]' : 'text-black') : 'text-neutral-400' }}">
+                                {{ $stage3Done ? ($active['is_disputed'] ? '⚠ Sengketa' : '✓ Selesai') : ($active['is_in_use'] ? 'Siap Kembali' : 'Terkunci') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- TAHAP 1 BOX: CEKLIST PEMBAYARAN SELESAI -->
+                    <div class="rounded-[4px] border border-neutral-200 bg-[#f9f9f9] p-5">
+                        <div class="flex items-center justify-between border-b border-neutral-200 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-5 w-5 items-center justify-center rounded-[4px] bg-black text-[10px] font-bold text-white">1</span>
+                                <h3 class="text-sm font-bold text-[#000000]">Tahap 1: Ceklist Pembayaran Selesai (SRS UC-08 & FR-PAY-02)</h3>
+                            </div>
+                            @if ($stage1Done)
+                                <span class="rounded-[4px] border border-[#fff700] bg-[#fff700] px-2.5 py-1 text-[10px] font-bold text-[#000000]">
+                                    ✓ Lunas & Terverifikasi
+                                </span>
+                            @else
+                                <span class="rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] px-2.5 py-1 text-[10px] font-bold text-[#ba1a1a]">
+                                    Belum Lunas
+                                </span>
+                            @endif
+                        </div>
+
+                        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                            <div class="rounded-[4px] border border-neutral-200 bg-[#ffffff] p-3">
+                                <span class="text-[10px] font-semibold uppercase text-neutral-400">Total Sewa</span>
+                                <div class="mt-1 text-sm font-bold text-black">{{ $this->rupiah($active['total']) }}</div>
+                            </div>
+                            <div class="rounded-[4px] border border-neutral-200 bg-[#ffffff] p-3">
+                                <span class="text-[10px] font-semibold uppercase text-neutral-400">Nominal DP Terbayar</span>
+                                <div class="mt-1 text-sm font-bold text-black">{{ $this->rupiah($active['nominal_dp']) }}</div>
+                            </div>
+                            <div class="rounded-[4px] border border-neutral-200 bg-[#ffffff] p-3">
+                                <span class="text-[10px] font-semibold uppercase text-neutral-400">Sisa Tagihan</span>
+                                <div class="mt-1 text-sm font-bold {{ $active['sisa_tagihan'] > 0 ? 'text-[#ba1a1a]' : 'text-[#16a34a]' }}">
+                                    {{ $this->rupiah($active['sisa_tagihan']) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        @if ($stage1Done)
+                            <div class="mt-4 rounded-[4px] bg-white p-3 text-xs text-neutral-600 border border-neutral-200">
+                                <span class="font-bold text-black">Status Pembayaran Terverifikasi:</span> Seluruh biaya sewa sebesar {{ $this->rupiah($active['total']) }} telah berstatus lunas. Anda dapat melanjutkan serah terima barang pada Tahap 2.
+                            </div>
+                        @else
+                            <div class="mt-4 space-y-3 rounded-[4px] bg-white p-4 border border-neutral-200">
+                                <p class="text-xs text-neutral-600">
+                                    Pelanggan menggunakan skema pembayaran DP. Sisa tagihan sebesar <strong class="text-black">{{ $this->rupiah($active['sisa_tagihan']) }}</strong> wajib dilunasi saat pengambilan barang di tenant (SRS UC-08).
+                                </p>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-neutral-600">Catatan Pelunasan Sisa Tagihan (Opsional)</label>
+                                    <input type="text" wire:model="catatanPembayaran" placeholder="Contoh: Diterima tunai / transfer pelunasan saat pengambilan unit" class="mt-1 w-full rounded-[4px] border border-neutral-300 bg-[#ffffff] px-3 py-2 text-xs text-[#000000] outline-none focus:border-black">
+                                </div>
+                                <button type="button" wire:click="verifyPayment({{ $active['id'] }})" class="rounded-[4px] bg-[#000000] px-4 py-2 text-xs font-bold text-[#ffffff] hover:bg-neutral-800 transition">
+                                    Ceklist Pembayaran Selesai (Lunas)
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- TAHAP 2 BOX: CEKLIST BARANG DIGUNAKAN / SERAH TERIMA -->
+                    <div class="rounded-[4px] border border-neutral-200 bg-[#f9f9f9] p-5">
+                        <div class="flex items-center justify-between border-b border-neutral-200 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-5 w-5 items-center justify-center rounded-[4px] bg-black text-[10px] font-bold text-white">2</span>
+                                <h3 class="text-sm font-bold text-[#000000]">Tahap 2: Ceklist Barang Digunakan / Serah Terima (SRS FR-TEN-03 & UC-10)</h3>
+                            </div>
+                            @if ($stage2Done)
+                                <span class="rounded-[4px] border border-[#bbf7d0] bg-[#dcfce7] px-2.5 py-1 text-[10px] font-bold text-[#16a34a]">
+                                    ✓ Sedang Disewa
+                                </span>
+                            @elseif (! $stage1Done)
+                                <span class="rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] px-2.5 py-1 text-[10px] font-bold text-[#ba1a1a]">
+                                    Terkunci
+                                </span>
+                            @else
+                                <span class="rounded-[4px] border border-neutral-300 bg-[#d9d9d9] px-2.5 py-1 text-[10px] font-bold text-[#000000]">
+                                    Menunggu Serah Terima
+                                </span>
+                            @endif
+                        </div>
+
+                        @if (! $stage1Done)
+                            <div class="mt-4 rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] p-3 text-xs font-semibold text-[#ba1a1a]">
+                                🔒 <strong>Guard Aturan:</strong> Tahap 2 tidak dapat diselesaikan apabila status pembayaran belum lunas. Selesaikan Tahap 1 terlebih dahulu.
+                            </div>
+                        @elseif ($stage2Done)
+                            <div class="mt-4 space-y-3 rounded-[4px] bg-[#ffffff] p-4 border border-neutral-200 text-xs">
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <span class="text-[10px] font-semibold uppercase text-neutral-400">Waktu Serah Terima Aktual</span>
+                                        <div class="mt-1 font-semibold text-black">{{ $active['actual_handover_at'] ?? '-' }}</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-semibold uppercase text-neutral-400">Tenggat Waktu Pengembalian</span>
+                                        <div class="mt-1 font-bold text-[#B45309]">{{ $active['return_deadline'] ?? '-' }}</div>
+                                    </div>
+                                </div>
+                                @if ($active['foto_kondisi_awal'])
+                                    <div>
+                                        <span class="text-[10px] font-semibold uppercase text-neutral-400">Dokumentasi Kondisi Awal Unit</span>
+                                        <div class="mt-1.5">
+                                            <a href="{{ $active['foto_kondisi_awal'] }}" target="_blank" class="inline-block">
+                                                <img src="{{ $active['foto_kondisi_awal'] }}" alt="Kondisi Awal" class="h-20 w-28 rounded-[4px] object-cover border border-neutral-300">
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="mt-4 space-y-4 rounded-[4px] bg-[#ffffff] p-4 border border-neutral-200 text-xs">
+                                <!-- Checkbox 1: Identitas KTP -->
+                                <div class="space-y-2 rounded-[4px] bg-[#f9f9f9] p-3 border border-neutral-200">
+                                    <label class="flex items-start gap-2.5 cursor-pointer">
+                                        <input type="checkbox" wire:model="checklistIdentitasOk" class="mt-0.5 rounded-[4px] border-neutral-300 text-black focus:ring-black">
+                                        <span class="font-bold text-black">
+                                            1. Identitas asli pelanggan cocok dengan data KTP terverifikasi pada sistem
+                                        </span>
+                                    </label>
+                                    @error('checklistIdentitasOk') <span class="block text-[11px] font-semibold text-[#ba1a1a]">{{ $message }}</span> @enderror
+                                    <div class="ml-6 flex items-center gap-4 text-neutral-500">
+                                        <span>NIK Terdaftar: <strong class="text-black">{{ $active['nik_ktp'] }}</strong></span>
+                                        @if ($active['url_foto_ktp'])
+                                            <a href="{{ $active['url_foto_ktp'] }}" target="_blank" class="font-bold text-blue-600 hover:underline">Pratinjau Foto KTP Sistem</a>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <!-- Checkbox 2: Fisik Awal Lengkap -->
+                                <div class="space-y-1 rounded-[4px] bg-[#f9f9f9] p-3 border border-neutral-200">
+                                    <label class="flex items-start gap-2.5 cursor-pointer">
+                                        <input type="checkbox" wire:model="checklistKondisiAwalOk" class="mt-0.5 rounded-[4px] border-neutral-300 text-black focus:ring-black">
+                                        <span class="font-bold text-black">
+                                            2. Kelengkapan unit (body kamera, lensa, baterai, charger, tas) lengkap dan berfungsi normal
+                                        </span>
+                                    </label>
+                                    @error('checklistKondisiAwalOk') <span class="block text-[11px] font-semibold text-[#ba1a1a]">{{ $message }}</span> @enderror
+                                </div>
+
+                                <!-- Step 3: Upload Foto Awal -->
+                                <div class="space-y-2">
+                                    <label class="block font-bold text-neutral-700">
+                                        3. Unggah Foto Kondisi Awal Unit (Dokumentasi Serah Terima)
+                                    </label>
+                                    <input type="file" wire:model="fotoKondisiAwal" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-3 file:rounded-[4px] file:border-0 file:bg-[#d9d9d9] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-black hover:file:bg-neutral-300">
+                                    @error('fotoKondisiAwal') <span class="block text-[11px] font-semibold text-[#ba1a1a]">{{ $message }}</span> @enderror
+
+                                    @if ($fotoKondisiAwal)
+                                        <div class="mt-2 flex items-center gap-3">
+                                            <img src="{{ $fotoKondisiAwal->temporaryUrl() }}" alt="Pratinjau Kondisi Awal" class="h-20 w-28 rounded-[4px] object-cover border border-neutral-300">
+                                            <span class="text-[11px] font-medium text-neutral-500">Pratinjau foto dokumentasi serah terima</span>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <button type="button" wire:click="confirmHandover({{ $active['id'] }})" class="rounded-[4px] bg-[#000000] px-4 py-2.5 text-xs font-bold text-[#ffffff] hover:bg-neutral-800 transition">
+                                    Konfirmasi & Tandai Barang Digunakan
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- TAHAP 3 BOX: CEKLIST PENANDA PEMINJAMAN SELESAI / PENGEMBALIAN -->
+                    <div class="rounded-[4px] border border-neutral-200 bg-[#f9f9f9] p-5">
+                        <div class="flex items-center justify-between border-b border-neutral-200 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-5 w-5 items-center justify-center rounded-[4px] bg-black text-[10px] font-bold text-white">3</span>
+                                <h3 class="text-sm font-bold text-[#000000]">Tahap 3: Ceklist Penanda Peminjaman Selesai / Pengembalian (SRS FR-TEN-04 & UC-13/14)</h3>
+                            </div>
+                            @if ($active['is_completed'])
+                                <span class="rounded-[4px] border border-[#fff700] bg-[#fff700] px-2.5 py-1 text-[10px] font-bold text-[#000000]">
+                                    ✓ Peminjaman Selesai
+                                </span>
+                            @elseif ($active['is_disputed'])
+                                <span class="rounded-[4px] border border-[#ffdad6] bg-[#ffdad6] px-2.5 py-1 text-[10px] font-bold text-[#ba1a1a]">
+                                    ⚠ Sengketa Kerusakan
+                                </span>
+                            @elseif (! $active['is_in_use'])
+                                <span class="rounded-[4px] border border-neutral-300 bg-[#d9d9d9] px-2.5 py-1 text-[10px] font-bold text-[#000000]">
+                                    Terkunci
+                                </span>
+                            @else
+                                <span class="rounded-[4px] border border-[#bbf7d0] bg-[#dcfce7] px-2.5 py-1 text-[10px] font-bold text-[#16a34a]">
+                                    Siap Diproses
+                                </span>
+                            @endif
+                        </div>
+
+                        @if (! $active['is_in_use'] && ! $stage3Done)
+                            <div class="mt-4 rounded-[4px] border border-neutral-200 bg-[#ffffff] p-3 text-xs font-medium text-neutral-500">
+                                🔒 <strong>Guard Aturan:</strong> Hanya aktif apabila pesanan sudah berstatus <em>sedang disewa</em> (in_use). Selesaikan Tahap 2 terlebih dahulu.
+                            </div>
+                        @elseif ($stage3Done)
+                            <div class="mt-4 space-y-3 rounded-[4px] bg-[#ffffff] p-4 border border-neutral-200 text-xs">
+                                <div class="grid gap-3 sm:grid-cols-3">
+                                    <div>
+                                        <span class="text-[10px] font-semibold uppercase text-neutral-400">Waktu Pengembalian Aktual</span>
+                                        <div class="mt-1 font-bold text-black">{{ $active['actual_returned_at'] ?? '-' }}</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-semibold uppercase text-neutral-400">Denda Keterlambatan</span>
+                                        <div class="mt-1 font-bold {{ $active['denda_keterlambatan'] > 0 ? 'text-[#ba1a1a]' : 'text-neutral-700' }}">
+                                            {{ $this->rupiah($active['denda_keterlambatan']) }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-semibold uppercase text-neutral-400">Kondisi Akhir</span>
+                                        <div class="mt-1 font-bold {{ $active['kondisi_barang_kembali'] === 'rusak' ? 'text-[#ba1a1a]' : 'text-[#16a34a]' }}">
+                                            {{ strtoupper($active['kondisi_barang_kembali']) }}
+                                        </div>
+                                    </div>
+                                </div>
+                                @if ($active['kondisi_barang_kembali'] === 'rusak')
+                                    <div class="rounded-[4px] border border-[#ffdad6] bg-[#ffdad6]/40 p-3">
+                                        <div class="font-bold text-[#ba1a1a]">Detail Klaim Kerusakan (Diteruskan ke Pusat Aduan SuperAdmin):</div>
+                                        <p class="mt-1 text-neutral-700">{{ $active['deskripsi_kerusakan'] ?: '-' }}</p>
+                                        <div class="mt-1 font-bold text-[#ba1a1a]">Estimasi Klaim: {{ $this->rupiah($active['estimasi_biaya_kerusakan']) }}</div>
+                                    </div>
+                                @endif
+                                @if ($active['foto_kondisi_akhir'])
+                                    <div>
+                                        <span class="text-[10px] font-semibold uppercase text-neutral-400">Dokumentasi Kondisi Akhir Unit</span>
+                                        <div class="mt-1.5">
+                                            <a href="{{ $active['foto_kondisi_akhir'] }}" target="_blank" class="inline-block">
+                                                <img src="{{ $active['foto_kondisi_akhir'] }}" alt="Kondisi Akhir" class="h-20 w-28 rounded-[4px] object-cover border border-neutral-300">
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="mt-4 space-y-4 rounded-[4px] bg-[#ffffff] p-4 border border-neutral-200 text-xs">
+                                <!-- Info Waktu Pengembalian & Denda Otomatis (UC-14) -->
+                                <div class="rounded-[4px] border border-neutral-200 bg-[#f9f9f9] p-3 space-y-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-bold text-neutral-700">Tenggat Waktu Pengembalian:</span>
+                                        <span class="font-bold text-[#B45309]">{{ $active['return_deadline'] }}</span>
+                                    </div>
+                                    @if ($active['is_overdue'])
+                                        <div class="text-[#ba1a1a] font-bold">
+                                            ⚠ Waktu sewa telah melewati batas tenggat. Sistem menghitung denda keterlambatan otomatis:
+                                            <span class="text-sm font-extrabold text-[#ba1a1a]">{{ $this->rupiah($active['denda_otomatis']) }}</span>
+                                        </div>
+                                    @else
+                                        <div class="text-[#16a34a] font-bold">
+                                            ✓ Pengembalian unit masih dalam batas waktu sewa (Rp 0 denda).
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Checkbox Kondisi Fisik Akhir -->
+                                <div class="space-y-1 rounded-[4px] bg-[#f9f9f9] p-3 border border-neutral-200">
+                                    <label class="flex items-start gap-2.5 cursor-pointer">
+                                        <input type="checkbox" wire:model="checklistKondisiAkhirOk" class="mt-0.5 rounded-[4px] border-neutral-300 text-black focus:ring-black">
+                                        <span class="font-bold text-black">
+                                            Seluruh unit dan aksesori telah dikembalikan lengkap sesuai checklist awal
+                                        </span>
+                                    </label>
+                                    @error('checklistKondisiAkhirOk') <span class="block text-[11px] font-semibold text-[#ba1a1a]">{{ $message }}</span> @enderror
+                                </div>
+
+                                <!-- Upload Foto Kondisi Akhir -->
+                                <div class="space-y-2">
+                                    <label class="block font-bold text-neutral-700">
+                                        Unggah Foto Kondisi Akhir Unit (Dokumentasi Pengembalian)
+                                    </label>
+                                    <input type="file" wire:model="fotoKondisiAkhir" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-3 file:rounded-[4px] file:border-0 file:bg-[#d9d9d9] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-black hover:file:bg-neutral-300">
+                                    @error('fotoKondisiAkhir') <span class="block text-[11px] font-semibold text-[#ba1a1a]">{{ $message }}</span> @enderror
+
+                                    @if ($fotoKondisiAkhir)
+                                        <div class="mt-2 flex items-center gap-3">
+                                            <img src="{{ $fotoKondisiAkhir->temporaryUrl() }}" alt="Pratinjau Kondisi Akhir" class="h-20 w-28 rounded-[4px] object-cover border border-neutral-300">
+                                            <span class="text-[11px] font-medium text-neutral-500">Pratinjau foto dokumentasi pengembalian</span>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Opsi Kondisi Kerusakan -->
+                                <div class="space-y-3 rounded-[4px] bg-[#f9f9f9] p-3 border border-neutral-200">
+                                    <label class="block font-bold text-black">Opsi Kondisi Unit:</label>
+                                    <div class="flex items-center gap-6">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" wire:model.live="kondisiKerusakan" value="baik" class="rounded-[4px] text-black focus:ring-black">
+                                            <span class="font-bold text-black">Unit Baik / Tidak Ada Kerusakan</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" wire:model.live="kondisiKerusakan" value="rusak" class="rounded-[4px] text-[#ba1a1a] focus:ring-[#ba1a1a]">
+                                            <span class="font-bold text-[#ba1a1a]">Ditemukan Kerusakan</span>
+                                        </label>
+                                    </div>
+
+                                    @if ($kondisiKerusakan === 'rusak')
+                                        <div class="mt-3 space-y-3 border-t border-neutral-200 pt-3">
+                                            <div>
+                                                <label class="block text-[11px] font-bold text-neutral-700">Deskripsi Kerusakan Unit</label>
+                                                <textarea wire:model="deskripsiKerusakan" rows="2" placeholder="Jelaskan bagian yang rusak, lecet, pecah, atau malfungsi..." class="mt-1 w-full rounded-[4px] border border-neutral-300 bg-white p-2 text-xs text-black outline-none focus:border-black"></textarea>
+                                                @error('deskripsiKerusakan') <span class="block text-[11px] font-semibold text-[#ba1a1a]">{{ $message }}</span> @enderror
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-bold text-neutral-700">Estimasi Biaya Klaim Kerusakan (Rp)</label>
+                                                <input type="number" wire:model="estimasiBiayaKerusakan" min="0" placeholder="0" class="mt-1 w-full rounded-[4px] border border-neutral-300 bg-white p-2 text-xs text-black outline-none focus:border-black">
+                                                @error('estimasiBiayaKerusakan') <span class="block text-[11px] font-semibold text-[#ba1a1a]">{{ $message }}</span> @enderror
+                                            </div>
+                                            <p class="text-[11px] font-medium text-[#ba1a1a]">
+                                                * Catatan: Pesanan dengan kerusakan akan dialihkan ke status Sengketa (Disputed) untuk diteruskan ke Pusat Aduan SuperAdmin.
+                                            </p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <button type="button" wire:click="confirmReturn({{ $active['id'] }})" class="rounded-[4px] bg-[#000000] px-4 py-2.5 text-xs font-bold text-[#ffffff] hover:bg-neutral-800 transition">
+                                    Tandai Peminjaman Selesai
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex items-center justify-end border-t border-neutral-200 bg-[#f9f9f9] px-6 py-4">
+                    <button type="button" wire:click="closeChecklistModal" class="rounded-[4px] bg-[#d9d9d9] px-4 py-2 text-xs font-bold text-[#000000] hover:bg-neutral-300 transition">
+                        Tutup
+                    </button>
+                </div>
             </div>
         </div>
     @endif

@@ -46,6 +46,7 @@ class GetTenantDashboardMetricsUseCase
             ->get();
 
         $bookings = DetailPemesananTenant::query()
+            ->with(['verifikasiKtp.user', 'produk'])
             ->where('id_tenant', $tenant->id_tenant)
             ->orderByDesc('waktu_ambil_booking')
             ->get();
@@ -108,15 +109,51 @@ class GetTenantDashboardMetricsUseCase
             'status' => $product->total_stock_unit > 0 ? 'Tersedia' : 'Stok Habis',
         ])->values();
 
-        $bookingRows = $bookings->map(fn (DetailPemesananTenant $booking) => [
-            'kode' => $booking->sub_order_eksternal ?: 'MC-'.str_pad((string) $booking->id_pemesanan, 4, '0', STR_PAD_LEFT),
-            'produk' => $productsById->get($booking->id_produk) ? $productsById->get($booking->id_produk)->nama_produk : 'Produk',
-            'penyewa' => '-',
-            'mulai' => $this->formatDate($booking->waktu_ambil_booking),
-            'selesai' => $this->formatDate($booking->waktu_kembali_booking),
-            'status' => $booking->status_sewa ?: 'Booking Aktif',
-            'total' => (float) $booking->total_harga,
-        ])->values();
+        $bookingRows = $bookings->map(function (DetailPemesananTenant $booking) use ($productsById) {
+            $customerName = $booking->verifikasiKtp?->user?->name
+                ?? $booking->verifikasiKtp?->user?->nama_lengkap_ktp
+                ?? 'Pelanggan';
+
+            $now = Carbon::now();
+            $deadline = $booking->return_deadline ?? $booking->waktu_kembali_booking;
+            $isOverdue = $deadline && $now->greaterThan($deadline) && $booking->isInUse();
+            $dendaOtomatis = $booking->calculateAutomaticLateFine($now);
+
+            return [
+                'id' => $booking->id_pemesanan,
+                'kode' => $booking->booking_code,
+                'produk' => $productsById->get($booking->id_produk) ? $productsById->get($booking->id_produk)->nama_produk : 'Produk',
+                'penyewa' => $customerName,
+                'mulai' => $this->formatDate($booking->waktu_ambil_booking),
+                'selesai' => $this->formatDate($booking->waktu_kembali_booking),
+                'status' => $booking->status_sewa ?: 'Booking Aktif',
+                'total' => (float) $booking->total_harga,
+                'nominal_dp' => (float) ($booking->nominal_dp ?? 0),
+                'sisa_tagihan' => (float) ($booking->sisa_tagihan ?? max(0, (float) $booking->total_harga - (float) ($booking->nominal_dp ?? 0))),
+                'status_harga' => $booking->status_harga ?? 'belum_lunas',
+                'is_payment_verified' => (bool) $booking->isPaymentComplete(),
+                'actual_handover_at' => $booking->actual_handover_at ? $this->formatDate($booking->actual_handover_at) : null,
+                'actual_handover_raw' => $booking->actual_handover_at?->toIso8601String(),
+                'return_deadline' => $booking->return_deadline ? $this->formatDate($booking->return_deadline) : $this->formatDate($booking->waktu_kembali_booking),
+                'return_deadline_raw' => $deadline?->toIso8601String(),
+                'return_deadline_formatted' => $booking->return_deadline_formatted,
+                'is_overdue' => $isOverdue,
+                'actual_returned_at' => $booking->actual_returned_at ? $this->formatDate($booking->actual_returned_at) : null,
+                'denda_keterlambatan' => (float) ($booking->denda_keterlambatan ?: $dendaOtomatis),
+                'denda_otomatis' => (float) $dendaOtomatis,
+                'foto_kondisi_awal' => $booking->foto_kondisi_awal,
+                'foto_kondisi_akhir' => $booking->foto_kondisi_akhir,
+                'url_foto_ktp' => $booking->url_foto_ktp ?: ($booking->verifikasiKtp?->url_foto_ktp ?? null),
+                'nik_ktp' => $booking->verifikasiKtp?->nik_ktp ?? '-',
+                'kondisi_barang_kembali' => $booking->kondisi_barang_kembali ?? 'baik',
+                'deskripsi_kerusakan' => $booking->deskripsi_kerusakan,
+                'estimasi_biaya_kerusakan' => (float) ($booking->estimasi_biaya_kerusakan ?? 0),
+                'checklist_data' => $booking->checklist_data ?? [],
+                'is_in_use' => $booking->isInUse(),
+                'is_completed' => $booking->isCompleted(),
+                'is_disputed' => $booking->isDisputed(),
+            ];
+        })->values();
 
         $commissionRows = $commissions->map(function (KomisiPlatform $commission) use ($bookings) {
             $booking = $bookings->firstWhere('id_pemesanan', $commission->id_pemesanan);
@@ -175,7 +212,7 @@ class GetTenantDashboardMetricsUseCase
                 'values' => $chartValues,
             ],
             'products' => $productRows->all(),
-            'bookings' => $bookingRows->take(10)->all(),
+            'bookings' => $bookingRows->all(),
             'commissions' => $commissionRows->all(),
             'commission_billing' => $this->commissionBilling($tenant, $commissions),
         ];

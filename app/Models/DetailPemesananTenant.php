@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DetailPemesananTenant extends Model
 {
@@ -17,8 +18,18 @@ class DetailPemesananTenant extends Model
     protected $casts = [
         'waktu_ambil_booking' => 'datetime',
         'waktu_kembali_booking' => 'datetime',
+        'actual_handover_at' => 'datetime',
+        'return_deadline' => 'datetime',
+        'actual_returned_at' => 'datetime',
+        'payment_verified_at' => 'datetime',
         'harga_sewa_booking' => 'decimal:2',
         'total_harga' => 'decimal:2',
+        'nominal_dp' => 'decimal:2',
+        'sisa_tagihan' => 'decimal:2',
+        'estimasi_biaya_kerusakan' => 'decimal:2',
+        'denda_keterlambatan' => 'decimal:2',
+        'is_payment_verified' => 'boolean',
+        'checklist_data' => 'array',
     ];
 
     public function tenant(): BelongsTo
@@ -36,9 +47,69 @@ class DetailPemesananTenant extends Model
         return $this->belongsTo(VerifikasiKtp::class, 'id_ktp', 'id_ktp');
     }
 
-    public function pengaduan()
+    public function pengaduan(): HasMany
     {
         return $this->hasMany(PengaduanPelanggan::class, 'id_pemesanan', 'id_pemesanan');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'auditable_id', 'id_pemesanan')
+            ->where('auditable_type', self::class);
+    }
+
+    public function isPaymentComplete(): bool
+    {
+        if ($this->is_payment_verified) {
+            return true;
+        }
+
+        $status = strtolower((string) ($this->status_harga ?? ''));
+        if (in_array($status, ['lunas', 'settled', 'paid', 'confirmed'], true)) {
+            return true;
+        }
+
+        return (float) ($this->sisa_tagihan ?? 0) <= 0 && (float) ($this->total_harga ?? 0) > 0;
+    }
+
+    public function isInUse(): bool
+    {
+        $status = strtolower((string) ($this->status_sewa ?? ''));
+
+        return in_array($status, ['sedang disewa', 'in_use', 'disewa', 'aktif'], true);
+    }
+
+    public function isCompleted(): bool
+    {
+        $status = strtolower((string) ($this->status_sewa ?? ''));
+
+        return in_array($status, ['selesai', 'completed'], true);
+    }
+
+    public function isDisputed(): bool
+    {
+        $status = strtolower((string) ($this->status_sewa ?? ''));
+
+        return in_array($status, ['disputed', 'sengketa', 'rusak'], true);
+    }
+
+    public function calculateAutomaticLateFine(?Carbon $asOf = null): float
+    {
+        $now = $asOf ?? Carbon::now();
+        $deadline = $this->return_deadline ?? $this->waktu_kembali_booking;
+
+        if (! $deadline || $now->lessThanOrEqualTo($deadline)) {
+            return 0.0;
+        }
+
+        $lateMinutes = $deadline->diffInMinutes($now);
+        $lateDays = max(1, (int) ceil($lateMinutes / 1440));
+
+        $dailyRate = (float) $this->harga_sewa_booking > 0
+            ? (float) $this->harga_sewa_booking
+            : ((float) $this->total_harga / max(1, (int) ($this->durasi_sewa_hari ?: 1)));
+
+        return round($lateDays * $dailyRate, 2);
     }
 
     public function getProductNameAttribute(): string
@@ -55,6 +126,7 @@ class DetailPemesananTenant extends Model
     {
         $address = $this->tenant?->alamat_toko ?? 'Indonesia';
         $parts = explode(',', $address);
+
         return trim(end($parts));
     }
 
@@ -65,7 +137,7 @@ class DetailPemesananTenant extends Model
 
     public function getBookingCodeAttribute(): string
     {
-        return $this->sub_order_eksternal ?? "MC-" . str_pad((string) $this->id_pemesanan, 4, '0', STR_PAD_LEFT);
+        return $this->sub_order_eksternal ?? 'MC-'.str_pad((string) $this->id_pemesanan, 4, '0', STR_PAD_LEFT);
     }
 
     public function getStartDateAttribute(): string
@@ -82,16 +154,27 @@ class DetailPemesananTenant extends Model
             : '27 Okt 2025';
     }
 
-    public function getReturnDeadlineAttribute(): string
+    public function getReturnDeadlineFormattedAttribute(): string
     {
-        return $this->waktu_kembali_booking
-            ? $this->waktu_kembali_booking->translatedFormat('d M Y') . ' (Maks. ' . $this->waktu_kembali_booking->format('H:i') . ')'
-            : '27 Okt 2025 (Maks. 18:00)';
+        $deadline = $this->return_deadline ?? $this->waktu_kembali_booking;
+
+        return $deadline
+            ? Carbon::parse($deadline)->translatedFormat('d M Y (Maks. H:i)')
+            : '-';
+    }
+
+    public function getReturnDeadlineAttribute(): mixed
+    {
+        if (isset($this->attributes['return_deadline']) && $this->attributes['return_deadline']) {
+            return Carbon::parse($this->attributes['return_deadline']);
+        }
+
+        return $this->waktu_kembali_booking;
     }
 
     public function getFormattedTotalAttribute(): string
     {
-        return 'Rp ' . number_format((float) ($this->total_harga ?? 0), 0, ',', '.');
+        return 'Rp '.number_format((float) ($this->total_harga ?? 0), 0, ',', '.');
     }
 
     public function getGearImageAttribute(): string
@@ -109,7 +192,7 @@ class DetailPemesananTenant extends Model
     {
         $status = strtolower($this->status_sewa ?? '');
 
-        if (str_contains($status, 'sedang') || str_contains($status, 'aktif')) {
+        if (str_contains($status, 'sedang') || str_contains($status, 'aktif') || str_contains($status, 'in_use')) {
             return [
                 'bg' => '#dcfce7',
                 'text' => '#16a34a',
@@ -118,7 +201,7 @@ class DetailPemesananTenant extends Model
             ];
         }
 
-        if (str_contains($status, 'selesai')) {
+        if (str_contains($status, 'selesai') || str_contains($status, 'completed')) {
             return [
                 'bg' => '#fff700',
                 'text' => '#000000',
@@ -127,12 +210,12 @@ class DetailPemesananTenant extends Model
             ];
         }
 
-        if (str_contains($status, 'terlambat')) {
+        if (str_contains($status, 'terlambat') || str_contains($status, 'disputed') || str_contains($status, 'sengketa')) {
             return [
                 'bg' => '#ffdad6',
                 'text' => '#ba1a1a',
                 'border' => '#fca5a5',
-                'label' => 'Terlambat',
+                'label' => $status === 'disputed' || $status === 'sengketa' ? 'Sengketa' : 'Terlambat',
             ];
         }
 
