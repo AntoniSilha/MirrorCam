@@ -1,8 +1,8 @@
 <?php
-
 use App\Models\Tenant;
 use App\Modules\TenantManagement\Concerns\BuildsRevenueChart;
 use App\Modules\TenantManagement\Concerns\ManagesTenantProducts;
+use App\Modules\TenantManagement\Concerns\ManagesTenantProfile;
 use App\Modules\TenantManagement\UseCases\GetTenantDashboardMetricsUseCase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +17,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
 {
     use BuildsRevenueChart;
     use ManagesTenantProducts;
+    use ManagesTenantProfile;
     use WithFileUploads;
 
     public string $section = 'ringkasan';
@@ -34,6 +35,7 @@ new #[Title('Dashboard Mitra - MirrorCam')] #[Layout('components.layouts.mitra')
         $tenant = $this->tenant();
 
         $this->maintenanceMode = (bool) ($tenant?->mode_libur ?? false);
+        $this->initTenantProfile();
     }
 
     protected function tenant(): ?Tenant

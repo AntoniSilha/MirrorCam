@@ -76,8 +76,17 @@
         <div class="mt-8 border-t border-neutral-100 pt-4">
             <div class="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                 <div class="flex min-w-0 items-center gap-3">
-                    @if ($tenant['logo'])
-                        <img src="{{ $tenant['logo'] }}" alt="{{ $tenant['nama_toko'] }}" class="h-10 w-10 shrink-0 rounded-full border border-neutral-200 object-cover">
+                    @php
+                        $sidebarLogo = $currentLogoUrl
+                            ?? (! empty($tenant['logo'])
+                                ? (\Illuminate\Support\Str::startsWith($tenant['logo'], ['http://', 'https://'])
+                                    ? $tenant['logo']
+                                    : asset('storage/'.ltrim($tenant['logo'], '/')))
+                                : null);
+                    @endphp
+
+                    @if ($sidebarLogo)
+                        <img src="{{ $sidebarLogo }}" alt="{{ $tenant['nama_toko'] }}" class="h-10 w-10 shrink-0 rounded-full border border-neutral-200 object-cover">
                     @else
                         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#d9d9d9] text-xs font-bold text-black">
                             {{ $tenant['inisial'] }}
@@ -92,7 +101,7 @@
 
                 <form method="POST" action="{{ route('logout') }}" class="shrink-0">
                     @csrf
-                    <button type="submit" title="" class="rounded-md p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-black">
+                    <button type="submit" title="Keluar" class="rounded-md p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-black">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
