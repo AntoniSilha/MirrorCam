@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureUserIsCustomer;
 use App\Http\Middleware\EnsureUserIsMitra;
+use App\Http\Middleware\EnsureUserIsSuperAdmin;
 use App\Http\Middleware\RedirectToCanonicalHost;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -22,6 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role.user' => EnsureUserIsCustomer::class,
             'role.mitra' => EnsureUserIsMitra::class,
+            'role.superadmin' => EnsureUserIsSuperAdmin::class,
+        ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'midtrans/callback',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

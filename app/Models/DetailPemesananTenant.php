@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DetailPemesananTenant extends Model
 {
@@ -52,6 +53,11 @@ class DetailPemesananTenant extends Model
         return $this->hasMany(PengaduanPelanggan::class, 'id_pemesanan', 'id_pemesanan');
     }
 
+    public function komisiPlatform(): HasOne
+    {
+        return $this->hasOne(KomisiPlatform::class, 'id_pemesanan', 'id_pemesanan');
+    }
+
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class, 'auditable_id', 'id_pemesanan')
@@ -96,7 +102,8 @@ class DetailPemesananTenant extends Model
     public function calculateAutomaticLateFine(?Carbon $asOf = null): float
     {
         $now = $asOf ?? Carbon::now();
-        $deadline = $this->return_deadline ?? $this->waktu_kembali_booking;
+        $rawDeadline = $this->getRawOriginal('return_deadline') ?? $this->attributes['return_deadline'] ?? null;
+        $deadline = $rawDeadline ? Carbon::parse($rawDeadline) : $this->waktu_kembali_booking;
 
         if (! $deadline || $now->lessThanOrEqualTo($deadline)) {
             return 0.0;
@@ -156,11 +163,12 @@ class DetailPemesananTenant extends Model
 
     public function getReturnDeadlineFormattedAttribute(): string
     {
-        $deadline = $this->return_deadline ?? $this->waktu_kembali_booking;
+        $raw = $this->attributes['return_deadline'] ?? null;
+        $deadline = $raw ? Carbon::parse($raw) : $this->waktu_kembali_booking;
 
         return $deadline
-            ? Carbon::parse($deadline)->translatedFormat('d M Y (Maks. H:i)')
-            : '-';
+            ? $deadline->translatedFormat('d M Y (Maks. H:i)')
+            : '27 Okt 2025 (Maks. 18:00)';
     }
 
     public function getReturnDeadlineAttribute(): mixed

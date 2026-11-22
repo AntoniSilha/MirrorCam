@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Portals\Customer\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\PengaduanPelanggan\StorePengaduanPelangganRequest;
 use App\Models\DetailPemesananTenant;
 use App\Models\PengaduanPelanggan;
+use App\Models\Tenant;
 use App\Models\VerifikasiKtp;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +31,7 @@ class PengaduanPelangganController extends Controller
 
         // 2. Base isolated query for current customer
         $baseQuery = PengaduanPelanggan::query()
-            ->with(['tenant', 'pemesanan.produk.galeri', 'user'])
+            ->with(['tenant', 'pemesanan.produk.galeri', 'pemesanan.produk.durasi', 'user'])
             ->where('id_akun', $user->id_akun);
 
         // 3. Dynamic Summary Statistics for this user
@@ -86,12 +88,15 @@ class PengaduanPelangganController extends Controller
 
         // 8. Retrieve customer bookings for the complaint submission dropdown
         $ktpIds = VerifikasiKtp::where('id_akun', $user->id_akun)->pluck('id_ktp');
-        $userBookings = DetailPemesananTenant::with(['tenant', 'produk.galeri'])
+        $userBookings = DetailPemesananTenant::with(['tenant', 'produk.galeri', 'produk.durasi'])
             ->whereIn('id_ktp', $ktpIds)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // 9. Standard resolution hub categories
+        // 9. Fetch dynamic tenants from database for the terlapor dropdown
+        $tenants = Tenant::orderBy('nama_toko')->get();
+
+        // 10. Standard resolution hub categories
         $kategoriOptions = [
             'Kondisi Barang Rusak',
             'Pungutan Liar di Luar Invoice',
@@ -101,7 +106,7 @@ class PengaduanPelangganController extends Controller
             'Lainnya',
         ];
 
-        $viewName = view()->exists('customer.pengaduan.index') ? 'customer.pengaduan.index' : 'pages.customer.pengaduan.index';
+        $viewName = view()->exists('pages.customer.pengaduan.index') ? 'pages.customer.pengaduan.index' : 'customer.pengaduan.index';
 
         return view($viewName, [
             'pengaduans' => $pengaduans,
@@ -111,6 +116,7 @@ class PengaduanPelangganController extends Controller
             'kasusSelesai' => $selesaiCount,
             'perluTindakan' => $terlambatCount,
             'userBookings' => $userBookings,
+            'tenants' => $tenants,
             'kategoriOptions' => $kategoriOptions,
             'activeTab' => $activeTab,
             'currentKategori' => $kategori,
@@ -135,8 +141,12 @@ class PengaduanPelangganController extends Controller
     {
         $user = $request->user();
 
-        // Ensure booking exists
-        $booking = DetailPemesananTenant::with(['tenant', 'produk'])->findOrFail($request->id_pemesanan);
+        // Ensure booking exists (match sub_order_eksternal or id_pemesanan)
+        $bookingIdentifier = $request->nomor_booking ?: $request->id_pemesanan;
+        $booking = DetailPemesananTenant::with(['tenant', 'produk.durasi'])
+            ->where('sub_order_eksternal', $bookingIdentifier)
+            ->orWhere('id_pemesanan', $bookingIdentifier)
+            ->firstOrFail();
 
         // Security check: ensure user owns this booking (via KTP verification) if KTP records exist
         $userKtpIds = VerifikasiKtp::where('id_akun', $user->id_akun)->pluck('id_ktp');
@@ -144,7 +154,7 @@ class PengaduanPelangganController extends Controller
             abort(403, 'Anda tidak berwenang mengajukan sengketa untuk pesanan ini.');
         }
 
-        // Handle uploaded proof files (photos / videos)
+        // Handle uploaded proof files (photos / videos / pdf)
         $storedFiles = [];
         if ($request->hasFile('bukti_dokumen')) {
             $files = is_array($request->file('bukti_dokumen'))
@@ -166,14 +176,16 @@ class PengaduanPelangganController extends Controller
         $countThisYear = PengaduanPelanggan::whereYear('created_at', $year)->count() + 1;
         $nomorTiket = 'AMC-'.$year.'-'.str_pad((string) $countThisYear, 4, '0', STR_PAD_LEFT);
 
+        $tenantId = $request->id_tenant ?: $booking->id_tenant;
+
         // Create complaint record
         $pengaduan = PengaduanPelanggan::create([
             'nomor_tiket' => $nomorTiket,
             'id_akun' => $user->id_akun,
-            'id_tenant' => $booking->id_tenant,
+            'id_tenant' => $tenantId,
             'id_pemesanan' => $booking->id_pemesanan,
             'kategori_pelanggaran' => $request->kategori_pelanggaran,
-            'waktu_kejadian' => $request->waktu_kejadian,
+            'waktu_kejadian' => $request->waktu_kejadian ?? Carbon::now(),
             'sla_tenggat' => Carbon::now()->addHours(24),
             'estimasi_klaim' => $request->estimasi_klaim ?: ($booking->total_harga ?: 500000),
             'kronologi_kejadian' => $request->kronologi_kejadian,
@@ -184,7 +196,7 @@ class PengaduanPelangganController extends Controller
         ]);
 
         return redirect()->route('pengaduan.index')
-            ->with('status', "Tiket {$pengaduan->nomor_tiket} berhasil didaftarkan. Tim mediasi MirrorCam akan segera memproses laporan Anda.");
+            ->with('status', "Laporan Anda dengan Nomor Tiket {$pengaduan->nomor_tiket} berhasil dikirim. Tim Kepatuhan MirrorCam akan melakukan investigasi dalam 1x24 jam.");
     }
 
     /**
@@ -194,7 +206,7 @@ class PengaduanPelangganController extends Controller
     {
         $user = $request->user();
 
-        $pengaduan = PengaduanPelanggan::with(['tenant', 'pemesanan.produk.galeri', 'user'])
+        $pengaduan = PengaduanPelanggan::with(['tenant', 'pemesanan.produk.galeri', 'pemesanan.produk.durasi', 'user'])
             ->where('id_akun', $user->id_akun)
             ->where(function ($q) use ($id) {
                 $q->where('id_pengaduan', $id)

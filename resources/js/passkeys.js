@@ -1,1 +1,3 @@
-// passkeys.js placeholder
+import { Passkeys } from '@laravel/passkeys';
+
+window.Passkeys = Passkeys;

@@ -8,8 +8,8 @@
     <!-- Hero Banner Card -->
     <div class="bg-[#ffffff] border border-[#e5e5e5] rounded-[4px] p-6 sm:p-10 lg:p-12 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 shadow-xs">
         <!-- Left Content -->
-        <div class="max-w-xl z-10 space-y-4">
-            <h1 class="text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-[#000000] tracking-tight leading-tight">
+        <div class="order-2 max-w-xl z-10 space-y-4 text-center md:order-1 md:text-left">
+            <h1 class="text-[28px] sm:text-4xl lg:text-[42px] font-extrabold text-[#000000] tracking-tight leading-tight">
                 Yuk, abadikan momen<br>
                 dengan <span class="underline decoration-2 underline-offset-4">MirrorCam</span>
             </h1>
@@ -27,7 +27,7 @@
         </div>
 
         <!-- Right Visual / Camera Gear Illustration -->
-        <div class="relative shrink-0 w-full md:w-[480px] flex justify-center items-center">
+        <div class="relative order-1 w-full shrink-0 md:order-2 md:w-[480px] flex justify-center items-center">
             <svg class="w-full max-w-[420px] h-auto drop-shadow-xs" viewBox="0 0 520 280" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <!-- Camera Body -->
                 <rect x="220" y="80" width="220" height="150" rx="16" fill="#1f2937" stroke="#111827" stroke-width="4"/>
@@ -63,33 +63,35 @@
         <form action="{{ route('home') }}" method="GET" class="space-y-4">
             <!-- Tabs & Info Row -->
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#e5e5e5] pb-3">
-                <div class="flex items-center gap-2">
+                <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
                     <button
                         type="button"
                         @click="currentTab = 'camera'"
                         :class="currentTab === 'camera' ? 'bg-[#000000] text-white font-bold' : 'bg-[#f0f0f0] text-gray-700 font-semibold hover:bg-[#e4e4e4]'"
-                        class="px-4 py-2 text-xs sm:text-sm rounded-[4px] transition flex items-center gap-2"
+                        class="flex items-center justify-center gap-2 rounded-[4px] px-3 py-2 text-xs transition sm:px-4 sm:text-sm"
                     >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                         </svg>
-                        <span>Sewa Peralatan Kamera</span>
+                        <span class="sm:hidden">Kamera</span>
+                        <span class="hidden sm:inline">Sewa Peralatan Kamera</span>
                     </button>
                     <button
                         type="button"
                         @click="currentTab = 'studio'"
                         :class="currentTab === 'studio' ? 'bg-[#000000] text-white font-bold' : 'bg-[#f0f0f0] text-gray-700 font-semibold hover:bg-[#e4e4e4]'"
-                        class="px-4 py-2 text-xs sm:text-sm rounded-[4px] transition flex items-center gap-2"
+                        class="flex items-center justify-center gap-2 rounded-[4px] px-3 py-2 text-xs transition sm:px-4 sm:text-sm"
                     >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
-                        <span>Sewa Studio & Ruang Syuting</span>
+                        <span class="sm:hidden">Studio</span>
+                        <span class="hidden sm:inline">Sewa Studio & Ruang Syuting</span>
                     </button>
                     <input type="hidden" name="type" :value="currentTab" />
                 </div>
 
-                <div class="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+                <div class="hidden items-center gap-1.5 text-xs text-gray-500 font-medium sm:flex">
                     <svg class="w-4 h-4 text-[#B45309]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>

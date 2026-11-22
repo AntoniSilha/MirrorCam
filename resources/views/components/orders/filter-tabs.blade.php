@@ -6,25 +6,25 @@
 
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <!-- Filter Tabs -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+    <div class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-0">
         <!-- Semua Pesanan -->
         <button type="button"
                 wire:click="setFilter('semua')"
-                class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ $activeFilter === 'semua' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
-            Semua Pesanan ({{ $counts['semua'] ?? 0 }})
+                class="inline-flex shrink-0 items-center rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 {{ $activeFilter === 'semua' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:bg-neutral-200/50 hover:text-black' }}">
+            Semua ({{ $counts['semua'] ?? 0 }})
         </button>
 
         <!-- Sedang Disewa -->
         <button type="button"
                 wire:click="setFilter('sedang_disewa')"
-                class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ $activeFilter === 'sedang_disewa' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
+                class="inline-flex shrink-0 items-center rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 {{ $activeFilter === 'sedang_disewa' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:bg-neutral-200/50 hover:text-black' }}">
             Sedang Disewa ({{ $counts['sedang_disewa'] ?? 0 }})
         </button>
 
         <!-- Selesai -->
         <button type="button"
                 wire:click="setFilter('selesai')"
-                class="inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 {{ $activeFilter === 'selesai' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:text-black hover:bg-neutral-200/50' }}">
+                class="inline-flex shrink-0 items-center rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 {{ $activeFilter === 'selesai' ? 'bg-[#000000] text-[#ffffff] shadow-xs' : 'text-neutral-500 hover:bg-neutral-200/50 hover:text-black' }}">
             Selesai ({{ $counts['selesai'] ?? 0 }})
         </button>
     </div>

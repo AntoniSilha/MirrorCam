@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
 class Category extends Model
 {
     protected $table = 'kategori_produk';
+
     protected $primaryKey = 'id_kategori';
 
     protected $fillable = [

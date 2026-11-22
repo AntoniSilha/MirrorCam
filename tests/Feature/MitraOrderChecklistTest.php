@@ -41,7 +41,7 @@ function createMitraEnvironment(string $suffix = '1'): array
         'jabatan_penanggungjawab' => 'Owner',
         'email_resmi' => "tenant{$suffix}_".uniqid().'@example.com',
         'alamat_toko' => 'Jl. Kamera No. '.$suffix.', Jakarta',
-        'status_mitra' => 'aktif',
+        'status_mitra' => 'verified',
     ]);
 
     $kategori = KategoriProduk::first() ?? KategoriProduk::create([

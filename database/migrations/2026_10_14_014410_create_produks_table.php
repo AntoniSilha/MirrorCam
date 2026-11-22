@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('nama_produk');
             $table->string('color_produk')->nullable();
             $table->text('deskripsi_lengkap');
-            $table->decimal('harga_sewa', 12, 2);
             $table->integer('total_stock_unit');
             $table->timestamps();
 

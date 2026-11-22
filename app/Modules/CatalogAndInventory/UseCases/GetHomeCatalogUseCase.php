@@ -43,18 +43,15 @@ class GetHomeCatalogUseCase
     }
 
     /**
-     * Get active official tenant partners from database
+     * Get all tenant partners from database, including those awaiting approval.
      *
      * @return Collection<int, mixed>
      */
     public function getTenants(): Collection
     {
         if (Schema::hasTable('tenants')) {
-            return Tenant::withCount('products')
-                ->where(function ($q) {
-                    $q->where('status_mitra', 'aktif')
-                      ->orWhere('status_mitra', 'official');
-                })
+            return Tenant::withCount(['products', 'reviews'])
+                ->withAvg('reviews', 'rating_nilai')
                 ->get();
         }
 
@@ -69,7 +66,12 @@ class GetHomeCatalogUseCase
     public function getFeaturedProducts(): Collection
     {
         if (Schema::hasTable('produks')) {
-            return Product::with(['tenant', 'category', 'gallery'])->get();
+            return Product::with(['tenant', 'category', 'gallery'])
+                ->whereHas('tenant', fn ($tenant) => $tenant->where('mode_libur', false))
+                ->withMin('durations as lowest_duration_price', 'harga')
+                ->withAvg('reviews as avg_rating', 'rating_nilai')
+                ->withCount(['reviews', 'pemesanans'])
+                ->get();
         }
 
         return collect();

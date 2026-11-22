@@ -13,8 +13,18 @@ export default defineConfig({
             ],
             refresh: true,
             fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
+                bunny('Montserrat', {
+                    weights: [400, 500, 600, 700, 800],
+                    styles: ['normal'],
+                    preload: [{ weight: 400 }, { weight: 600 }, { weight: 700 }],
+                    optimizedFallbacks: false,
+                }),
+                bunny('Montserrat', {
+                    alias: 'montserrat-italic',
+                    weights: [400],
+                    styles: ['italic'],
+                    preload: false,
+                    optimizedFallbacks: false,
                 }),
             ],
         }),

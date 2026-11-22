@@ -7,36 +7,34 @@
 
     <title>{{ $title ?? 'MirrorCam - Dashboard User' }}</title>
 
-    <!-- Google Font: Montserrat -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <x-fonts.montserrat />
 
     <!-- Styles / Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
-        *, ::before, ::after {
-            font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif !important;
-        }
         body {
             background-color: #f9f9f9;
             color: #000000;
         }
     </style>
 </head>
-<body class="min-h-screen bg-[#f9f9f9] text-[#000000] antialiased flex flex-col md:flex-row">
+<body class="flex min-h-screen flex-col bg-[#f9f9f9] text-[#000000] antialiased md:flex-row">
+    <input type="checkbox" id="user-sidebar-toggle" class="peer sr-only" />
+
+    <label for="user-sidebar-toggle" class="fixed inset-0 z-40 hidden bg-black/40 peer-checked:block md:hidden" aria-label="Tutup menu"></label>
+
     <!-- Sidebar Navigation -->
     <x-navigation.sidebar :user="$user ?? []" />
 
     <!-- Main Content Area -->
-    <div class="flex-1 min-h-screen flex flex-col bg-[#f9f9f9] overflow-x-hidden">
+    <div class="flex min-h-screen flex-1 flex-col bg-[#f9f9f9] overflow-x-hidden">
         <!-- Topbar Header -->
-        <x-navigation.topbar />
+        <x-navigation.topbar :sidebar-toggle="true" />
 
         <!-- Notification Banner -->
         @if (session('status'))
-            <div class="px-6 md:px-12 pt-4">
+            <div class="px-4 sm:px-6 md:px-12 pt-4">
                 <div class="bg-[#dcfce7] border border-[#16a34a]/30 text-[#16a34a] px-4 py-3 rounded-sm text-sm flex items-center justify-between shadow-xs">
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +52,7 @@
         @endif
 
         @if (isset($errors) && $errors->any())
-            <div class="px-6 md:px-12 pt-4">
+            <div class="px-4 sm:px-6 md:px-12 pt-4">
                 <div class="bg-[#ffdad6] border border-[#ba1a1a]/30 text-[#ba1a1a] px-4 py-3 rounded-sm text-sm flex items-center justify-between shadow-xs">
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +70,7 @@
         @endif
 
         <!-- Page Main Content Slot / Yield -->
-        <main class="flex-1 px-6 md:px-12 py-6 max-w-7xl w-full">
+        <main class="w-full max-w-7xl flex-1 px-4 py-5 sm:px-6 sm:py-6 md:px-12">
             @yield('content')
             {{ $slot ?? '' }}
         </main>

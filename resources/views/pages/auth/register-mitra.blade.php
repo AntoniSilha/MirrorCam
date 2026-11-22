@@ -23,10 +23,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Menjadi Mitra Rental - MirrorCam</title>
 
-    <!-- Google Font Montserrat -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <x-fonts.montserrat />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -45,9 +42,6 @@
         /* Semua border default memakai #d9d9d9 (warna palet tombol) */
         *, ::before, ::after { border-color: #d9d9d9; }
 
-        body, input, textarea, select, button {
-            font-family: 'Montserrat', sans-serif !important;
-        }
         .custom-rounded { border-radius: 4px !important; }
 
         /* Tombol */

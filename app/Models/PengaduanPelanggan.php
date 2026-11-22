@@ -148,14 +148,16 @@ class PengaduanPelanggan extends Model
 
         $result = [];
         foreach ($files as $path) {
-            if (empty($path)) continue;
+            if (empty($path)) {
+                continue;
+            }
 
             $filename = basename($path);
             $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
             $url = str_starts_with($path, 'http')
                 ? $path
-                : (str_starts_with($path, '/storage') ? $path : asset('storage/' . ltrim($path, '/')));
+                : (str_starts_with($path, '/storage') ? $path : asset('storage/'.ltrim($path, '/')));
 
             $result[] = [
                 'name' => $filename,
@@ -179,7 +181,7 @@ class PengaduanPelanggan extends Model
             return null;
         }
 
-        return 'Rp ' . number_format((float) $this->estimasi_klaim, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->estimasi_klaim, 0, ',', '.');
     }
 
     /**
@@ -194,6 +196,7 @@ class PengaduanPelanggan extends Model
         $now = Carbon::now();
         if ($now->greaterThan($this->sla_tenggat)) {
             $diffHours = $now->diffInHours($this->sla_tenggat);
+
             return "Terlewat {$diffHours} Jam";
         }
 

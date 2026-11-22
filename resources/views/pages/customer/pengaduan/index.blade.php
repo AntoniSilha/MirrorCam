@@ -393,7 +393,7 @@
                                             {{ $product?->nama_produk ?? 'Peralatan Multimedia MirrorCam' }}
                                         </h3>
                                         <p class="text-[11px] text-gray-500 font-medium truncate mt-0.5">
-                                            Sewa Harian: Rp {{ number_format((float) ($booking?->harga_sewa_booking ?? $product?->harga_sewa ?? 250000), 0, ',', '.') }} / hari • Status: Terverifikasi Digital QC
+                                            Sewa Harian: Rp {{ number_format((float) ($booking?->harga_sewa_booking ?? $product?->harga_mulai ?? 0), 0, ',', '.') }} • Status: Terverifikasi Digital QC
                                         </p>
                                     </div>
                                 </div>

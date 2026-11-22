@@ -19,7 +19,7 @@ class OrderListResource extends JsonResource
 
         if ($this->resource instanceof DetailPemesananTenant) {
             $id = $this->resource->id_pemesanan;
-            $bookingCode = $this->resource->sub_order_eksternal ?? "MC-" . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
+            $bookingCode = $this->resource->sub_order_eksternal ?? 'MC-'.str_pad((string) $id, 4, '0', STR_PAD_LEFT);
             $productName = $this->resource->product_name;
             $gearImage = $this->resource->gear_image;
             $tenantName = $this->resource->tenant_name;
